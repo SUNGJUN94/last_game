@@ -1,0 +1,28 @@
+{% if disclosures and disclosures.object_list %}
+<div class="px-3 mt-3">
+  <div id="noticeCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="4000">
+    <div class="carousel-inner rounded-4 bg-light p-3">
+      {% for item_data in disclosures.object_list|slice:":5" %}  {# 최대 5개만 표시 #}
+        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+          <small class="text-muted">
+            <i class="bi bi-lightning-charge-fill text-primary"></i>
+            {% if item_data.is_api %}
+              [공시] {{ item_data.display_title }}
+            {% elif item_data.obj.category == '수동공시' %}
+              [수동] {{ item_data.display_title }}
+            {% else %}
+              {{ item_data.display_title }}
+            {% endif %}
+          </small>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="carousel-indicators position-static mt-2">
+      {% for item_data in disclosures.object_list|slice:":5" %}
+        <button type="button" data-bs-target="#noticeCarousel" data-bs-slide-to="{{ forloop.counter0 }}" class="{% if forloop.first %}active{% endif %}"></button>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}

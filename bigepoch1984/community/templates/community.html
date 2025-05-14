@@ -1,0 +1,203 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>커뮤니티</title>
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/community.css' %}">
+  <style>
+    .profile-icon {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      background-color: #e9ecef;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 32px;
+      font-size: 20px;
+      color: #9376e0;
+    }
+    .profile-icon i { vertical-align: middle; }
+    .profile-img { width: 32px; height: 32px; object-fit: cover; border-radius: 50%; }
+  </style>
+</head>
+<body
+  data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+  <div id="app">
+    {% include 'main_header.html' %}
+    {% include 'community_header.html' %}
+    <div style="height: 55px;"></div>
+
+    <div id="update-container" class="px-3 pt-3">
+      <div class="d-flex align-items-center justify-content-between bg-light text-decoration-none px-3" style="border-radius: 30px; height: 36px;">
+        <a href="{% url 'community:detail' 1 %}" class="d-flex align-items-center gap-2 flex-grow-1 text-decoration-none">
+          <span class="badge rounded-pill bg-success bg-opacity-10 text-success fw-bold px-2 py-1" style="font-size: 12px;">업데이트</span>
+          <span class="fw-semibold text-dark" style="font-size: 12px;">코박 시세조회 리뉴얼!</span>
+        </a>
+        <i class="bi bi-x-lg text-muted" role="button" style="font-size: 16px;" onclick="closeUpdateBox()"></i>
+      </div>
+    </div>
+
+    {% include 'community_carousel.html' with disclosures=disclosures_for_carousel %}
+
+    <div id="filter-header" class="d-flex align-items-center justify-content-between px-3" style="height: 43px; background: #f5f6f8;">
+      <a href="{% url 'community:write' %}" class="btn btn-primary rounded-pill px-3 py-1 d-flex align-items-center gap-1" style="font-size: 14px; font-weight: 500;">
+        <i class="bi bi-pencil-fill" style="font-size: 12px;"></i> 글쓰기
+      </a>
+      <button id="filterButton" class="btn border-0 p-0 m-0" style="background: transparent; font-size: 14px; font-weight: 500; color: #212529;" onclick="openFilterPopup()">
+        {{ period }} {{ sort }} ▼
+      </button>
+    </div>
+
+    <div id="filter-popup" onclick="closeFilterPopup()">
+      <div class="filter-box" onclick="event.stopPropagation()">
+        <div class="filter-drag-handle" onclick="closeFilterPopup()"></div>
+        <div class="filter-content">
+          <strong class="d-block mb-3">필터를 선택해주세요.</strong>
+          <div class="section-title">기간</div>
+          <div id="period-options">
+            <div class="filter-option {% if period == '하루' %}active{% endif %}" onclick="selectPeriod('하루')">하루</div>
+            <div class="filter-option {% if period == '일주일' %}active{% endif %}" onclick="selectPeriod('일주일')">일주일</div>
+            <div class="filter-option {% if period == '한달' %}active{% endif %}" onclick="selectPeriod('한달')">한달</div>
+            <div class="filter-option {% if period == '반년' %}active{% endif %}" onclick="selectPeriod('반년')">반년</div>
+          </div>
+          <hr class="my-4" />
+          <div class="section-title">정렬</div>
+          <div id="sort-options">
+            <div class="filter-option {% if sort == '최신순' %}active{% endif %}" onclick="selectSort('최신순')">최신순</div>
+            <div class="filter-option {% if sort == '조회수순' %}active{% endif %}" onclick="selectSort('조회수순')">조회수순</div>
+            <div class="filter-option {% if sort == '중요순' %}active{% endif %}" onclick="selectSort('중요순')">중요순</div>
+            <div class="filter-option {% if sort == '걱정순' %}active{% endif %}" onclick="selectSort('걱정순')">걱정순</div>
+          </div>
+        </div>
+        <div class="filter-footer">
+          <button class="btn btn-primary w-100" onclick="confirmFilter()">선택 완료</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="community-list" class="community-list">
+      {% for post in posts %}
+        <div class="community-item d-flex p-3 border-bottom">
+          <div class="flex-grow-1 d-flex flex-column">
+            <div class="d-flex align-items-center mb-2">
+              {% if post.user.profile_image %}
+                <img src="{{ post.user.profile_image.url }}" alt="프로필" class="profile-img me-2">
+              {% else %}
+                <span class="profile-icon me-2"><i class="bi bi-person-fill"></i></span>
+              {% endif %}
+              <div>
+                <div class="small">
+                  <a href="{% url 'community:detail' post.id %}" class="fw-bold text-dark text-decoration-none">{{ post.username }}</a>
+                  <span class="badge bg-primary ms-1">{% if post.user.auth_id == 'admin' %}운영자{% else %}일반회원{% endif %}</span>
+                </div>
+                <div class="text-muted small">
+                  <a href="{% url 'community:community' %}?tag=event" class="text-muted text-decoration-none">공지/이벤트</a> · {{ post.time_ago }}
+                </div>
+              </div>
+            </div>
+            <div class="mb-2 d-flex">
+              <div class="community-text-area">
+                <a href="{% url 'community:detail' post.id %}" class="title text-decoration-none d-block">{{ post.title }}</a>
+                <div class="content">{{ post.content|truncatechars:100 }}</div>
+              </div>
+              <div class="ms-3 flex-shrink-0">
+                <img src="{% if post.thumbnail %}{{ post.thumbnail }}{% else %}https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400{% endif %}" alt="썸네일" class="rounded-3" style="width:90px;height:90px;object-fit:cover;">
+              </div>
+            </div>
+            <div class="mt-2">
+              <div class="d-flex align-items-center gap-2">
+                <a href="{% url 'community:community' %}?coin=CBK" class="coin-price-badge text-decoration-none d-flex align-items-center gap-1 px-2 py-1 border rounded-pill small">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg" alt="코인" style="width:20px;height:20px;"> CBK
+                  <span class="text-danger">-0.38%</span>
+                </a>
+                <a href="{% url 'community:community' %}?coin=BTC" class="coin-price-badge text-decoration-none d-flex align-items-center gap-1 px-2 py-1 border rounded-pill small">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg" alt="코인" style="width:20px;height:20px;"> BTC
+                  <span class="text-success">+0.41%</span>
+                </a>
+              </div>
+              <div class="d-flex align-items-center gap-4 mt-2">
+                <span class="text-muted small">조회: {{ post.view_count }}</span>
+                {% if post.likes_count > 0 %}
+                  <a href="{% url 'community:detail' post.id %}#comments" class="d-flex align-items-center text-muted text-decoration-none">
+                    <i class="bi bi-emoji-smile"></i> <span class="ms-1">{{ post.likes_count }}</span>
+                  </a>
+                {% endif %}
+                {% if post.worried_count > 0 %}
+                  <a href="{% url 'community:detail' post.id %}#comments" class="d-flex align-items-center text-muted text-decoration-none">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <span class="ms-1">{{ post.worried_count }}</span>
+                  </a>
+                {% endif %}
+                {% if post.comments_count > 0 %}
+                  <a href="{% url 'community:detail' post.id %}#comments" class="d-flex align-items-center text-muted text-decoration-none">
+                    <i class="bi bi-chat"></i> <span class="ms-1">{{ post.comments_count }}</span>
+                  </a>
+                {% endif %}
+                <button onclick="openSharePopup()" class="ms-auto btn p-0 border-0 bg-transparent">
+                  <i class="bi bi-box-arrow-up-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div id="share-popup" class="share-popup" style="display:none;">
+      <div class="share-popup-inner">
+        <div class="share-popup-header">
+          <strong>공유하기</strong>
+          <button type="button" class="btn-close" onclick="closeSharePopup()">✖️</button>
+        </div>
+        <div class="share-popup-body p-3 d-flex flex-wrap justify-content-center gap-4">
+          <a class="share-icon" onclick="goShare('kakao')">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/kakaotalk.svg" alt="카카오톡">
+            <div>카카오톡</div>
+          </a>
+          <a class="share-icon" onclick="goShare('telegram')">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/telegram.svg" alt="텔레그램">
+            <div>텔레그램</div>
+          </a>
+          <a class="share-icon" onclick="goShare('facebook')">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/facebook.svg" alt="페이스북">
+            <div>페이스북</div>
+          </a>
+          <a class="share-icon" onclick="goShare('twitter')">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitter.svg" alt="트위터">
+            <div>트위터</div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {% include 'main_footer.html' %}
+
+    <button id="scrollTopBtn" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" style="
+      position: fixed;
+      bottom: 90px;
+      right: 15px;
+      display: none;
+      z-index: 1000;
+      width: 45px;
+      height: 45px;
+      font-size: 24px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    ">
+      <i class="bi bi-chevron-up" style="font-size: 20px;"></i>
+    </button>
+  </div>
+
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'js/script.js' %}"></script>
+  <script src="{% static 'js/community.js' %}"></script>
+</body>
+</html>

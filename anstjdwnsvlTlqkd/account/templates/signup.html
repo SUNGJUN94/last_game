@@ -1,0 +1,166 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bigepoch1984 회원가입</title>
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/community.css' %}">
+  <style>
+    /* 프로필 미리보기 스타일 */
+    #preview {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100px;
+      height: 100px;
+      background-color: #e9ecef; /* 기본 배경색 */
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    #preview-icon {
+      font-size: 48px; /* 아이콘 크기 */
+      color: #9376e0; /* mypage.html의 프로필 아이콘 색상과 동일 */
+    }
+    #preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+  </style>
+</head>
+<body
+  class="bg-light"
+  data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+  {% include 'main_header.html' %}
+  <div id="app" style="padding-top: 60px;">
+    <div class="container py-4" style="max-width: 400px;">
+      <form id="signupForm" method="POST" action="{% url 'account:signup' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="text-center mb-4">
+          <div id="preview" class="rounded-circle mx-auto">
+            <!-- 기본 아이콘 -->
+            <i id="preview-icon" class="bi bi-person-fill"></i>
+            <!-- 업로드된 이미지가 표시될 공간 -->
+            <img id="preview-img" style="display: none;" alt="프로필 미리보기">
+          </div>
+          <label for="profile_image" class="btn btn-outline-secondary mt-2">프로필 사진 선택</label>
+          <input type="file" id="profile_image" name="profile_image" accept="image/*" style="display: none;">
+          <div id="imageError" class="text-danger" style="font-size: 12px; margin-top: 5px; display: none;">이미지 형식이 올바르지 않습니다.</div>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+        <div class="mb-3">
+          <input type="text" class="form-control" id="login_id" name="login_id" placeholder="아이디" required minlength="4">
+          <div id="idError" class="text-danger" style="font-size: 12px; margin-top: 5px; display: none;">아이디는 최소 4자 이상이어야 합니다.</div>
+        </div>
+        <div class="mb-3">
+          <input type="text" class="form-control" id="nickname" name="nickname" placeholder="닉네임" required minlength="2">
+          <div id="nicknameError" class="text-danger" style="font-size: 12px; margin-top: 5px; display: none;">닉네임은 최소 2자 이상이어야 합니다.</div>
+        </div>
+        <div class="mb-3">
+          <input type="password" class="form-control" id="pwd" name="pwd" placeholder="비밀번호" required minlength="8">
+          <div id="pwdLengthError" class="text-danger" style="font-size: 12px; margin-top: 5px; display: none;">비밀번호는 최소 8자 이상이어야 합니다.</div>
+        </div>
+        <div class="mb-3">
+          <input type="password" class="form-control" id="pwd_confirm" name="pwd_confirm" placeholder="비밀번호 확인" required>
+          <div id="pwdError" class="text-danger" style="font-size: 12px; margin-top: 5px; display: none;">비밀번호가 일치하지 않습니다.</div>
+        </div>
+        <div class="mb-3">
+          <input type="email" class="form-control" id="email" name="email" placeholder="이메일" required>
+        </div>
+        <button type="submit" id="signupBtn" class="btn btn-primary w-100" disabled>가입하기</button>
+      </form>
+      <div class="text-center mt-4">
+        <p class="text-muted">이미 계정이 있으신가요? <a href="{% url 'account:login' %}" class="text-primary">로그인</a></p>
+      </div>
+    </div>
+  </div>
+  {% include 'main_footer.html' %}
+
+  <script>
+    const idInput = document.getElementById('login_id');
+    const nicknameInput = document.getElementById('nickname');
+    const pwdInput = document.getElementById('pwd');
+    const pwdConfirmInput = document.getElementById('pwd_confirm');
+    const profileImageInput = document.getElementById('profile_image');
+    const idError = document.getElementById('idError');
+    const nicknameError = document.getElementById('nicknameError');
+    const pwdError = document.getElementById('pwdError');
+    const pwdLengthError = document.getElementById('pwdLengthError');
+    const imageError = document.getElementById('imageError');
+    const signupBtn = document.getElementById('signupBtn');
+    const preview = document.getElementById('preview');
+    const previewIcon = document.getElementById('preview-icon');
+    const previewImg = document.getElementById('preview-img');
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        if (!file.type.startsWith('image/')) {
+          imageError.style.display = 'block';
+          profileImageInput.value = '';
+          previewIcon.style.display = 'block'; // 아이콘 표시
+          previewImg.style.display = 'none'; // 이미지 숨김
+          previewImg.src = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          previewIcon.style.display = 'none'; // 아이콘 숨김
+          previewImg.style.display = 'block'; // 이미지 표시
+          previewImg.src = e.target.result;
+          imageError.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        previewIcon.style.display = 'block'; // 아이콘 표시
+        previewImg.style.display = 'none'; // 이미지 숨김
+        previewImg.src = '';
+        imageError.style.display = 'none';
+      }
+      checkForm();
+    }
+
+    function checkForm() {
+      const id = idInput.value;
+      const nickname = nicknameInput.value;
+      const pwd = pwdInput.value;
+      const pwdConfirm = pwdConfirmInput.value;
+
+      idError.style.display = id.length < 4 ? 'block' : 'none';
+      nicknameError.style.display = nickname.length < 2 ? 'block' : 'none';
+      pwdLengthError.style.display = pwd.length < 8 ? 'block' : 'none';
+      pwdError.style.display = (pwd && pwdConfirm && pwd !== pwdConfirm) ? 'block' : 'none';
+
+      signupBtn.disabled = !(id.length >= 4 && nickname.length >= 2 && pwd.length >= 8 && pwd === pwdConfirm);
+    }
+
+    idInput.addEventListener('input', checkForm);
+    nicknameInput.addEventListener('input', checkForm);
+    pwdInput.addEventListener('input', checkForm);
+    pwdConfirmInput.addEventListener('input', checkForm);
+    profileImageInput.addEventListener('change', previewImage);
+
+    document.querySelector('label[for="profile_image"]').addEventListener('click', function(e) {
+      e.preventDefault();
+      profileImageInput.click();
+    });
+  </script>
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+</body>
+</html>

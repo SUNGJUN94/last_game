@@ -1,0 +1,153 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if is_edit %}게시글 수정{% else %}게시글 작성{% endif %}</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Bootstrap CSS -->
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <!-- Bootstrap Icons (아이콘용) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/community.css' %}">
+  <!-- 퍼블리셔의 인라인 스타일 -->
+  <style>
+    body { background-color: #f8f9fa; }
+    .form-control::placeholder { color: #adb5bd; }
+    .btn-rounded { border-radius: 16px; }
+    #captcha-container { display: flex; gap: 10px; align-items: center; }
+    #captcha-input { width: 100px; }
+    #captcha-refresh-btn { width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; }
+    #captcha-btn { font-family: monospace; }
+    #captcha-error { color: red; font-size: 0.9em; margin-top: 5px; display: none; }
+  </style>
+</head>
+<body
+  data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+
+  <!-- 헤더 삽입 -->
+  {% include 'main_header.html' %}
+
+  <nav class="navbar bg-white px-3 py-2 border-bottom">
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="history.back()">←</button>
+    <span class="ms-2 fw-bold">게시글 작성</span>
+  </nav>
+
+  <!-- 본문 감싸는 div 추가 -->
+  <div id="app" style="padding-top: 60px;">
+    <div class="container py-4">
+      <h5 class="mb-3 fw-bold">{% if is_edit %}게시글 수정{% else %}게시글 작성{% endif %}</h5>
+
+      {% if error %}
+        <div class="alert alert-danger" role="alert">
+          {{ error }}
+        </div>
+      {% endif %}
+
+      <form method="POST" action="{% if is_edit %}{% url 'community:edit' post_id %}{% else %}{% url 'community:write' %}{% endif %}" id="postForm">
+        {% csrf_token %}
+        <div class="mb-3">
+          <input type="text" class="form-control" id="title" name="title" placeholder="제목" value="{{ title|default_if_none:'' }}" required>
+        </div>
+        <div class="mb-3">
+          <input type="text" class="form-control" id="tags" name="tags" placeholder="태그">
+        </div>
+        <div class="mb-3">
+          <textarea class="form-control" id="content" name="content" rows="8" placeholder="텍스트 입력" required>{{ content|default_if_none:'' }}</textarea>
+        </div>
+
+        <div class="mb-3">
+          <div class="d-flex gap-2" id="captcha-container">
+            <button type="button" class="btn btn-outline-dark w-50" id="captcha-btn">메크로방지</button>
+            <input type="text" class="form-control w-50" id="captcha-input" name="captcha_answer" placeholder="숫자를 입력하세요" required pattern="[0-9]{4}">
+            <button type="button" class="btn btn-outline-secondary" id="captcha-refresh-btn"><i class="bi bi-arrow-clockwise"></i></button>
+            <input type="hidden" id="captcha-value" name="captcha_value">
+          </div>
+          <div id="captcha-error">잘못 입력했습니다.</div>
+        </div>
+
+        <div class="d-flex gap-3">
+          <a href="{% if is_edit %}{% url 'community:detail' post_id %}{% else %}{% url 'community:community' %}{% endif %}" class="btn btn-secondary flex-fill btn-rounded">취소</a>
+          <button type="submit" class="btn btn-primary flex-fill btn-rounded" id="submit-btn">{% if is_edit %}수정{% else %}등록{% endif %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 푸터 삽입 -->
+  {% include 'main_footer.html' %}
+
+  <!-- Bootstrap JS -->
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <!-- Custom JS -->
+  <script src="{% static 'js/community.js' %}"></script>
+  <script src="{% static 'js/script.js' %}"></script>
+  <script>
+    // 매크로 방지 기능: 4자리 숫자 생성
+    function generateCaptcha() {
+      const captchaNumber = Math.floor(1000 + Math.random() * 9000); // 1000~9999 사이의 4자리 숫자
+      document.getElementById('captcha-value').value = captchaNumber;
+      document.getElementById('captcha-btn').textContent = `메크로방지 (${captchaNumber})`;
+      document.getElementById('captcha-input').value = ''; // 입력값 초기화
+      document.getElementById('submit-btn').disabled = true; // 버튼 비활성화
+      document.getElementById('captcha-error').style.display = 'none'; // 경고 메시지 숨김
+    }
+
+    // 초기 캡차 생성
+    document.addEventListener('DOMContentLoaded', () => {
+      generateCaptcha();
+
+      // 새 캡차 생성 버튼
+      document.getElementById('captcha-refresh-btn').addEventListener('click', generateCaptcha);
+
+      // 캡차 입력 검증
+      document.getElementById('captcha-input').addEventListener('input', () => {
+        const userAnswer = document.getElementById('captcha-input').value;
+        const correctAnswer = document.getElementById('captcha-value').value;
+        const submitBtn = document.getElementById('submit-btn');
+        const errorMsg = document.getElementById('captcha-error');
+
+        // 입력값이 4자리 숫자인지 확인
+        const isValidInput = /^[0-9]{4}$/.test(userAnswer);
+
+        if (userAnswer && isValidInput) {
+          if (userAnswer === correctAnswer.toString()) {
+            submitBtn.disabled = false;
+            errorMsg.style.display = 'none';
+          } else {
+            submitBtn.disabled = true;
+            errorMsg.style.display = 'block';
+          }
+        } else {
+          submitBtn.disabled = true;
+          if (userAnswer) {
+            errorMsg.style.display = 'block';
+          } else {
+            errorMsg.style.display = 'none';
+          }
+        }
+      });
+
+      // 폼 제출 시 추가 검증
+      document.getElementById('postForm').addEventListener('submit', (e) => {
+        const userAnswer = document.getElementById('captcha-input').value;
+        const correctAnswer = document.getElementById('captcha-value').value;
+        if (userAnswer !== correctAnswer.toString()) {
+          e.preventDefault();
+          alert('잘못 입력했습니다.');
+          generateCaptcha();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

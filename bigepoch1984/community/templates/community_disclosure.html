@@ -1,0 +1,103 @@
+{% load static %}
+{% load humanize %}
+
+{# disclosures는 가공된 딕셔셔너리 리스트를 담고 있는 Page 객체 #}
+{% if disclosures and disclosures.object_list %}
+  <ul class="list-group list-group-flush">
+    {% for item_data in disclosures.object_list %}
+      <li class="list-group-item community-item py-3">
+        <a href="{{ item_data.link }}" 
+           {% if item_data.is_api %}target="_blank" rel="noopener noreferrer"{% endif %} 
+           class="text-decoration-none">
+          <div class="d-flex w-100 justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <h6 class="mb-1 community-title">
+                {% if item_data.is_api %}
+                  [공시] {{ item_data.display_title }}
+                {% elif item_data.obj.category == '수동공시' %}
+                  [수동] {{ item_data.display_title }}
+                {% else %}
+                  {{ item_data.display_title }}
+                {% endif %}
+              </h6>
+              <small class="text-muted d-block">{{ item_data.display_company_name }}</small>
+            </div>
+            <small class="text-muted ms-2 flex-shrink-0 text-end" style="min-width: 100px;">
+                {{ item_data.display_date|date:"Y.m.d" }}<br>
+                <span class="badge 
+                             {% if item_data.is_api %}bg-primary{% elif item_data.obj.category == '수동공시' %}bg-secondary{% else %}bg-light text-dark{% endif %} 
+                             rounded-pill mt-1" style="font-size: 0.75em;">
+                    {{ item_data.display_category }}
+                </span>
+            </small>
+          </div>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+
+  {# 페이지네이션: page_obj 대신 disclosures 변수를 직접 사용하고, 로직 단순화 #}
+  {% if disclosures.paginator.num_pages > 1 %} {# 전체 페이지 수가 1보다 클 때만 페이지네이션 표시 #}
+    <nav aria-label="Page navigation" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {# 이전 페이지 버튼 #}
+        {% if disclosures.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?tab=news&subtab=disclosure&page={{ disclosures.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Previous">
+              <span aria-hidden="true">&laquo;</span>
+            </a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">&laquo;</span>
+          </li>
+        {% endif %}
+
+        {# 페이지 번호 목록 #}
+        {% for num in disclosures.paginator.page_range %}
+          {% if disclosures.number == num %}
+            <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
+          {% elif num > disclosures.number|add:'-3' and num < disclosures.number|add:'3' %} {# 현재 페이지 주변 2개씩 #}
+            <li class="page-item"><a class="page-link" href="?tab=news&subtab=disclosure&page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a></li>
+          {% elif num == 1 or num == disclosures.paginator.num_pages %} {# 첫 페이지와 마지막 페이지 항상 표시 #}
+            {% if disclosures.number > 4 and num == 1 and forloop.counter0 < disclosures.number|add:"-3" %} {# ... 표시 (앞) #}
+              <li class="page-item"><a class="page-link" href="?tab=news&subtab=disclosure&page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">1</a></li>
+              <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% elif disclosures.number < disclosures.paginator.num_pages|add:"-3" and num == disclosures.paginator.num_pages and forloop.counter > disclosures.number|add:"3" %} {# ... 표시 (뒤) #}
+              <li class="page-item disabled"><span class="page-link">...</span></li>
+              <li class="page-item"><a class="page-link" href="?tab=news&subtab=disclosure&page={{ disclosures.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ disclosures.paginator.num_pages }}</a></li>
+            {% elif num == 1 or num == disclosures.paginator.num_pages %} {# 현재 페이지가 첫/끝 근처일 때 중복 ... 방지 #}
+               <li class="page-item"><a class="page-link" href="?tab=news&subtab=disclosure&page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a></li>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+
+        {# 다음 페이지 버튼 #}
+        {% if disclosures.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?tab=news&subtab=disclosure&page={{ disclosures.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Next">
+              <span aria-hidden="true">&raquo;</span>
+            </a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">&raquo;</span>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+
+{% else %}
+  <div class="text-center p-5">
+    <i class="bi bi-archive-fill fs-1 text-muted mb-3"></i>
+    <p class="text-muted">최근 거래소 공시가 없습니다.</p>
+    <p><small>(데이터가 로드되지 않았거나 표시할 공시가 없습니다.)</small></p>
+  </div>
+{% endif %}
+
+<div class="text-end mt-3">
+    <a href="{% url 'community:write' %}?board_type=disclosure_manual" class="btn btn-secondary rounded-pill px-3">
+        <i class="bi bi-pencil-square me-1"></i> 공시 직접 작성
+    </a>
+</div>

@@ -1,0 +1,94 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>코박 로그인</title>
+  <!-- Bootstrap CSS -->
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/community.css' %}">
+  <style>
+    /* Fade-in 애니메이션 정의 */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .title-container {
+      background-color: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .system-title {
+      font-size: 1.2rem; /* 크기를 1.8rem에서 1.2rem으로 줄임 */
+      font-weight: 700;
+      background: linear-gradient(90deg, #1b1e26, #3b5bdb);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+      animation: fadeIn 1s ease-out;
+      white-space: nowrap; /* 텍스트가 한 줄에 표시되도록 설정 */
+    }
+  </style>
+</head>
+<body class="bg-light"
+class="bg-light"
+data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+  <!-- 헤더 삽입 (chart.html 참고) -->
+  {% include 'main_header.html' %}
+
+  <!-- 본문 감싸는 div 추가 (chart.html 참고) -->
+  <div id="app" style="padding-top: 60px;">
+    <div class="container py-5" style="max-width: 400px;">
+      <div class="text-center mb-4">
+        <div class="title-container">
+          <h1 class="system-title">AI 기반 퀀트 투자 예측 시스템</h1>
+        </div>
+        <a href="{% url 'account:signup' %}" class="btn btn-secondary btn-sm">회원가입</a>
+      </div>
+
+      {% if error %}
+      <div class="alert alert-danger" role="alert">{{ error }}</div>
+      {% endif %}
+      <form method="POST" action="{% url 'account:login' %}">
+        {% csrf_token %}
+        <div class="mb-3">
+          <input type="text" class="form-control" id="username" name="username" placeholder="아이디" required>
+        </div>
+        <div class="mb-3">
+          <input type="password" class="form-control" id="password" name="password" placeholder="비밀번호" required>
+        </div>
+        <button type="submit" class="btn btn-dark w-100 rounded-pill mb-4">로그인</button>
+        <div class="d-flex justify-content-between mb-4">
+          <a href="#" class="btn btn-outline-secondary btn-sm">아이디 찾기</a>
+          <a href="#" class="btn btn-outline-secondary btn-sm">비밀번호 찾기</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 푸터 삽입 (chart.html 참고) -->
+  {% include 'main_footer.html' %}
+
+  <!-- Bootstrap JS -->
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+</body>
+</html>

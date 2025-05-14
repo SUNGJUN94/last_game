@@ -1,0 +1,209 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>챗봇</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Bootstrap CSS -->
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <!-- Bootstrap Icons (아이콘용) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/community.css' %}">
+  <style>
+    #app {
+      padding: 20px;
+    }
+    .chat-messages {
+      position: relative; /* X 버튼을 절대 위치로 배치하기 위해 */
+      height: 400px;
+      overflow-y: auto;
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #e9ecef;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .close-btn:hover {
+      background-color: #ced4da;
+    }
+    .close-btn i {
+      font-size: 20px;
+      color: #495057;
+    }
+    .user-message {
+      background-color: #0d6efd;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 15px;
+      margin: 5px 0;
+      max-width: 70%;
+      align-self: flex-end;
+      text-align: right;
+      display: inline-block;
+    }
+    .bot-message {
+      background-color: #e9ecef;
+      color: black;
+      padding: 10px 15px;
+      border-radius: 15px;
+      margin: 5px 0;
+      max-width: 70%;
+      align-self: flex-start;
+      text-align: left;
+      display: inline-block;
+    }
+    .chat-input {
+      display: flex;
+      gap: 10px;
+    }
+    #chatInput {
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ced4da;
+      border-radius: 5px;
+    }
+    #sendBtn {
+      padding: 10px 20px;
+      background-color: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #sendBtn:hover {
+      background-color: #0056b3;
+    }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+  </style>
+</head>
+<body
+  data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+
+  <!-- 헤더 삽입 -->
+  {% include 'main_header.html' %}
+
+  <!-- 본문 감싸는 div 추가 -->
+  <div id="app">
+    <!-- 챗봇 메시지 영역 -->
+    <div class="chat-messages" id="chatMessages">
+      <!-- 닫기 버튼 -->
+      <button class="close-btn" onclick="history.back()">
+        <i class="bi bi-x"></i>
+      </button>
+      <!-- 메시지는 JS로 동적으로 추가 -->
+    </div>
+
+    <!-- 챗봇 입력 영역 -->
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="질문을 입력하세요...">
+      <button id="sendBtn">전송</button>
+    </div>
+  </div>
+
+  <!-- 푸터 삽입 -->
+  {% include 'main_footer.html' %}
+
+  <!-- Bootstrap JS -->
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <!-- Custom JS -->
+  <script src="{% static 'js/script.js' %}"></script>
+  <script>
+    document.getElementById('sendBtn').addEventListener('click', async function() {
+      const input = document.getElementById('chatInput');
+      const message = input.value.trim();
+      if (message) {
+        // 사용자 질문 추가
+        const messagesDiv = document.getElementById('chatMessages');
+        const userMsg = document.createElement('div');
+        userMsg.className = 'user-message';
+        userMsg.textContent = message;
+        messagesDiv.appendChild(userMsg);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        // 입력 필드 초기화
+        input.value = '';
+
+        // 로딩 메시지 표시
+        const loadingMsg = document.createElement('div');
+        loadingMsg.className = 'bot-message';
+        loadingMsg.textContent = '답변을 생성중입니다...';
+        messagesDiv.appendChild(loadingMsg);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        try {
+          // API 호출
+          const response = await fetch('/chatbot/chat/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: message })
+          });
+
+          const data = await response.json();
+
+          // 로딩 메시지 제거
+          messagesDiv.removeChild(loadingMsg);
+
+          if (data.status === 'success') {
+            // 챗봇 응답 표시
+            const botMsg = document.createElement('div');
+            botMsg.className = 'bot-message';
+            botMsg.textContent = data.message;
+            messagesDiv.appendChild(botMsg);
+          } else {
+            // 에러 메시지 표시
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'bot-message';
+            errorMsg.textContent = data.message || '알 수 없는 오류가 발생했습니다.';
+            messagesDiv.appendChild(errorMsg);
+          }
+        } catch (error) {
+          // 로딩 메시지 제거
+          messagesDiv.removeChild(loadingMsg);
+          
+          // 에러 메시지 표시
+          const errorMsg = document.createElement('div');
+          errorMsg.className = 'bot-message';
+          errorMsg.textContent = '서버 연결에 실패했습니다. 인터넷 연결을 확인해주세요.';
+          messagesDiv.appendChild(errorMsg);
+        }
+
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+    });
+
+    // Enter 키로 전송
+    document.getElementById('chatInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('sendBtn').click();
+      }
+    });
+  </script>
+</body>
+</html>

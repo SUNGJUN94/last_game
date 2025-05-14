@@ -1,0 +1,325 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>차트 페이지</title>
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/community.css' %}">
+  <style>
+    @media (max-width: 768px) {
+      .legend-container {
+        position: relative;
+        margin-top: 1rem;
+        text-align: center;
+      }
+    }
+    @media (min-width: 769px) {
+      .legend-container {
+        position: absolute;
+        top: 80px;
+        right: 40px;
+        z-index: 10;
+      }
+    }
+    .price-change-up {
+      color: #ff4444;
+    }
+    .price-change-down {
+      color: #4444ff;
+    }
+    .price-change-neutral {
+      color: #888888;
+    }
+    .fiftytwo-section {
+      font-size: 2.6rem;
+      font-weight: 600;
+      background: linear-gradient(90deg, #f8fafc 60%, #e0e7ef 100%);
+      border: 2px solid #b6c6e3;
+      border-radius: 1.5rem;
+      box-shadow: 0 4px 16px rgba(80,120,200,0.08);
+      color: #1a237e;
+      margin-bottom: 1.5rem;
+      padding: 1.5rem 0.5rem;
+      letter-spacing: 0.02em;
+    }
+    .fiftytwo-section .label {
+      color: #0d47a1;
+      font-weight: 700;
+      margin: 0 0.5rem;
+    }
+    .fiftytwo-section .value {
+      color: #d32f2f;
+      font-weight: 700;
+      margin: 0 0.5rem;
+    }
+    .pretty-chart-box {
+      background: linear-gradient(120deg, #f5f7fa 60%, #c3cfe2 100%);
+      border: 2px solid #b6c6e3;
+      border-radius: 2rem;
+      box-shadow: 0 6px 24px rgba(80,120,200,0.13);
+      padding: 2.5rem 1.5rem 2rem 1.5rem;
+      margin-bottom: 2rem;
+      margin-top: 1.5rem;
+    }
+    @media (max-width: 768px) {
+      .pretty-chart-box {
+        padding: 1rem 0.2rem 1rem 0.2rem;
+      }
+    }
+  </style>
+</head>
+<body
+  data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+  {% include 'main_header.html' %}
+
+  <div id="app" style="padding-top: 60px;">
+    <!-- 국가 증시 요약 -->
+    <div class="container my-3">
+      <div class="row g-2">
+        {% for market in markets %}
+          <div class="col-6">
+            <div class="bg-light rounded-3 p-3 text-center">
+              <strong>{{ market.name }}</strong><br>
+              {{ market.value }}<br>
+              <span class="{{ market.status }}">{{ market.change }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 실시간 뉴스 -->
+    <div class="container my-3">
+      <h6 class="fw-bold mb-2">실시간 뉴스</h6>
+      <ul class="list-group">
+        {% for item in news %}
+          <li class="list-group-item">{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  
+   
+    <!-- 기간 옵션 선택 UI -->
+    <div class="container mb-2">
+      <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+        <input type="text" name="query" value="{{ request.GET.query|default:'삼성전자' }}" placeholder="종목명 또는 코드 입력" class="form-control" style="max-width: 200px;">
+        <select name="period" class="form-select" style="max-width: 120px;">
+          <option value="1m" {% if period == '1m' %}selected{% endif %}>1개월</option>
+          <option value="3m" {% if period == '3m' %}selected{% endif %}>3개월</option>
+          <option value="6m" {% if period == '6m' or not period %}selected{% endif %}>6개월</option>
+          <option value="1y" {% if period == '1y' %}selected{% endif %}>1년</option>
+          <option value="3y" {% if period == '3y' %}selected{% endif %}>3년</option>
+          <option value="5y" {% if period == '5y' %}selected{% endif %}>5년</option>
+          <option value="all" {% if period == 'all' %}selected{% endif %}>전체</option>
+        </select>
+        <button type="submit" class="btn btn-primary">기간 조회</button>
+      </form>
+    </div>
+
+    <!-- 시세 그래프 영역 -->
+    <div class="container my-3">
+      <!-- 실시간/전일 종가 표시 -->
+      {% if stock_info %}
+      <div class="bg-white rounded-3 p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-1">{{ stock_info.name }}</h5>
+            <div class="text-muted small">전일 종가: {{ stock_info.previous_close|floatformat:0|intcomma }}원</div>
+          </div>
+          <div class="text-end">
+            <h4 class="mb-1">{{ stock_info.current_price|floatformat:0|intcomma }}원</h4>
+            <div class="{% if stock_info.change > 0 %}price-change-up{% elif stock_info.change < 0 %}price-change-down{% else %}price-change-neutral{% endif %}">
+              {{ stock_info.change|floatformat:0|intcomma }}원 ({{ stock_info.change_percent|floatformat:2 }}%)
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="bg-white rounded-3 p-3 mb-3 text-center text-danger">
+        실시간 시세 정보를 불러올 수 없습니다.
+      </div>
+      {% endif %}
+
+      <h6 class="fw-bold mb-2">시세 그래프{% if stock_name %} : {{ stock_name }}{% endif %}</h6>
+      <div class="pretty-chart-box position-relative">
+        <div id="stock-chart" style="width: 100%; height: 600px;"></div>
+        <div id="chart-legend" class="legend-container"></div>
+      </div>
+    </div>
+
+    <!-- 52주 최고/최저가 섹션 -->
+    <div class="container my-3">
+      <div class="fiftytwo-section text-center">
+        <span class="label">최근 52주 최고가:</span>
+        <span class="value">
+        {% if fifty_two_week_high %}
+          {{ fifty_two_week_high|floatformat:0|intcomma }}원
+        {% else %}
+          -
+        {% endif %}
+        </span>
+        &nbsp;|&nbsp;
+        <span class="label">최근 52주 최저가:</span>
+        <span class="value">
+        {% if fifty_two_week_low %}
+          {{ fifty_two_week_low|floatformat:0|intcomma }}원
+        {% else %}
+          -
+        {% endif %}
+        </span>
+      </div>
+    </div>
+
+    <!-- 급등락 종목 리스트 -->
+    <div class="container my-3">
+      <h6 class="fw-bold mb-2">급등락 종목 Top 5</h6>
+      <ul class="list-group">
+        {% for stock in stocks %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span class="text-dark">{{ stock.name }}</span>
+            <span class="{{ stock.status }}">{{ stock.change }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- add1_250512_18_36 
+  가람_추가이유:태영형이 해당 퍼블리싱이 차트탭에 있으면 적합할 것 같다는 의견을 줌=>추후 해당 퍼블리싱 관련 기능구현된다면 구현하기 
+  -->
+  <!-- 주식 시세 조회 영역 -->
+  <div class="bg-white px-3 py-3 my-3 rounded-4 border" style="margin: 0 12px; border: 1px solid #dee2e6;">
+    <h5 class="fw-bold mb-3">주식 시세 조회_태영형협력필요</h5>
+    <!-- 검색창 -->
+    <div class="input-group mb-3">
+      <span class="input-group-text bg-light border-0">
+        <i class="bi bi-search"></i>
+      </span>
+      <input type="text" id="coinSearch" class="form-control border-0 bg-light" placeholder="무엇을 검색할까요?">
+    </div>
+    <!-- 테이블 헤더 -->
+    <div class="d-flex fw-bold text-muted mb-2 px-2" style="font-size: 14px;">
+      <div class="flex-grow-1">이름</div>
+      <div style="width: 100px; text-align: right;">가격(KRW)</div>
+      <div style="width: 80px; text-align: right;">24시간(%)</div>
+    </div>
+    <!-- 코인 리스트 -->
+    <ul id="coin-list" class="list-unstyled mb-0">
+      <!-- JS로 채워넣음 -->
+    </ul>
+    <!-- 페이지네이션 버튼 -->
+    <div class="d-flex justify-content-end align-items-center gap-2 mt-3">
+      <button id="prevPage" class="btn btn-sm btn-outline-secondary rounded-circle" style="width: 36px; height: 36px;">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <button id="nextPage" class="btn btn-sm btn-outline-secondary rounded-circle" style="width: 36px; height: 36px;">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </div> 
+  <!-- add2 -->
+
+  {% include 'main_footer.html' %}
+
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'js/script.js' %}"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <script>
+    // 차트 데이터
+    const allDates = JSON.parse('{{ candle_dates|safe }}');
+    const openPrices = JSON.parse('{{ open_prices|safe }}');
+    const highPrices = JSON.parse('{{ high_prices|safe }}');
+    const lowPrices = JSON.parse('{{ low_prices|safe }}');
+    const closePrices = JSON.parse('{{ close_prices|safe }}');
+    const ma5 = JSON.parse('{{ ma5|safe }}');
+    const ma20 = JSON.parse('{{ ma20|safe }}');
+    const volume = JSON.parse('{{ volume|default:'[]' }}');
+
+    const candlestick = {
+      x: allDates,
+      open: openPrices,
+      high: highPrices,
+      low: lowPrices,
+      close: closePrices,
+      type: 'candlestick',
+      name: '시세',
+      increasing: { line: { color: 'red' } },
+      decreasing: { line: { color: 'blue' } }
+    };
+
+    const ma5_line = {
+      x: allDates,
+      y: ma5,
+      name: '5일 이동평균선',
+      mode: 'lines',
+      line: { color: 'cyan', width: 1 }
+    };
+
+    const volume_bar = {
+      x: allDates,
+      y: volume,
+      type: 'bar',
+      name: '거래량',
+      marker: { color: '#bfa800' },
+      yaxis: 'y2',
+      opacity: 0.5
+    };
+
+    const data = [candlestick, ma5_line, volume_bar];
+
+    const layout = {
+      paper_bgcolor: '#1e1e1e',
+      plot_bgcolor: '#2c2c2c',
+      font: { color: '#ffffff' },
+      xaxis: {
+        tickangle: 45,
+        tickformat: '%Y-%m-%d',
+        showgrid: true,
+        gridcolor: '#444',
+        autorange: true,
+        rangeslider: { visible: false },
+        type: 'date'
+      },
+      yaxis: {
+        showgrid: true,
+        gridcolor: '#444',
+        tickformat: ',.0f',
+        title: '가격'
+      },
+      yaxis2: {
+        overlaying: 'y',
+        side: 'right',
+        showgrid: false,
+        title: '거래량',
+        color: '#bfa800',
+        tickfont: { color: '#bfa800' },
+        titlefont: { color: '#bfa800' }
+      },
+      margin: { t: 50, b: 80 },
+      dragmode: 'pan',
+      showlegend: true,
+      legend: {
+        orientation: window.innerWidth <= 768 ? 'h' : 'v',
+        x: 0,
+        y: 1.15,
+        xanchor: 'left',
+        bgcolor: 'rgba(0,0,0,0)'
+      },
+      hovermode: 'x unified'
+    };
+
+    const config = { displaylogo: false, responsive: true };
+
+    Plotly.newPlot('stock-chart', data, layout, config);
+  </script>
+</body>
+</html>

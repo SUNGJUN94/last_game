@@ -1,0 +1,34 @@
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Django
+*.log
+debug.log
+*.sqlite3
+
+staticfiles/
+
+# Virtual environment
+venv/
+.env
+.env.local
+*.env
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Other
+*.bak
+*.swp
+*.tmp*.pyc
+
+*:Zone.Identifier
