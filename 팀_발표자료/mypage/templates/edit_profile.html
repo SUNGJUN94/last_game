@@ -1,0 +1,257 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회원정보 수정</title>
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/community.css' %}">
+  <style>
+    /* 프로필 미리보기 스타일 */
+    #preview {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100px;
+      height: 100px;
+      background-color: #e9ecef; /* 기본 배경색 */
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    #preview-icon {
+      font-size: 48px; /* 아이콘 크기 */
+      color: #9376e0; /* mypage.html의 프로필 아이콘 색상과 동일 */
+    }
+    #preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    /* add1 */
+    .btn-gradient {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 1rem;
+      font-size: 14px;
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(45deg, #6a11cb, #2575fc);
+      border: none;
+      border-radius: 30px;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-gradient i {
+      margin-right: 5px;
+      font-size: 16px;
+    }
+
+    .btn-gradient:hover {
+      background: linear-gradient(45deg, #2575fc, #6a11cb);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+      color: #fff; /* hover 시 텍스트 색상을 흰색으로 유지 */
+      text-decoration: none; /* 텍스트 밑줄 제거 */
+    }
+
+    .btn-gradient:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    /* add2 */
+  </style>
+</head>
+<body
+  data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+  {% include 'main_header.html' %}
+
+  <div id="app" style="padding-top: 60px;">
+    <div class="container py-4" style="max-width: 400px;">
+      <div class="d-flex justify-content-start mb-3">
+        <a href="{% url 'mypage:mypage' %}" class="btn-gradient" aria-label="마이페이지로 돌아가기">
+          <i class="bi bi-arrow-left" style="font-size: 14px;"></i>
+        </a>
+      </div>
+
+      {% if messages %}
+        <div class="mb-3">
+          {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="POST" action="{% url 'mypage:edit_profile' %}" id="editProfileForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="text-center mb-4">
+          <div id="preview" class="rounded-circle mx-auto">
+            <!-- 기본 아이콘 또는 기존 프로필 이미지 -->
+            {% if user.profile_image %}
+              <img id="preview-img" src="{{ user.profile_image.url }}?t={{ now }}" alt="프로필 미리보기">
+              <i id="preview-icon" class="bi bi-person-fill" style="display: none;"></i>
+            {% else %}
+              <i id="preview-icon" class="bi bi-person-fill"></i>
+              <img id="preview-img" style="display: none;" alt="프로필 미리보기">
+            {% endif %}
+          </div>
+          <label for="profile_image" class="btn btn-outline-primary mt-2">프로필 사진 변경</label>
+          <input type="file" id="profile_image" name="profile_image" accept="image/*" style="display: none;">
+          <div id="imageError" class="text-danger" style="font-size: 12px; margin-top: 5px; display: none;">이미지 형식이 올바르지 않습니다.</div>
+          <div id="uploadDebug" style="font-size: 12px; margin-top: 5px; color: blue; display: none;">File selected: <span id="fileName"></span></div>
+        </div>
+
+        <div class="mb-3">
+          <label for="username" class="form-label">아이디</label>
+          <input type="text" class="form-control" id="username" name="username" value="{{ user.login_id }}" readonly>
+        </div>
+        <!-- add1 -->
+        <div class="mb-3">
+          <label for="name" class="form-label">이름</label>
+          <input type="text" class="form-control" id="name" name="name" value="{{ user.name }}" required minlength="2">
+        </div>
+        <!-- add2 -->
+        <div class="mb-3">
+          <label for="email" class="form-label">이메일</label>
+          <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" readonly>
+        </div>
+        <div class="mb-3">
+          <label for="nickname" class="form-label">닉네임</label>
+          <input type="text" class="form-control" id="nickname" name="nickname" value="{{ user.nickname }}" placeholder="닉네임" required minlength="2">
+          <div id="nicknameError" class="text-danger" style="font-size: 12px; margin-top: 5px; display: none;">닉네임은 최소 2자 이상이어야 합니다.</div>
+        </div>
+        <div class="mb-3">
+          <label for="password" class="form-label">비밀번호</label>
+          <input type="password" class="form-control" id="password" name="password" placeholder="비밀번호 (8자 이상)">
+          <div id="pwdLengthError" class="text-danger" style="font-size: 12px; margin-top: 5px; display: none;">비밀번호는 최소 8자 이상이어야 합니다.</div>
+        </div>
+        <div class="mb-3">
+          <label for="password_confirm" class="form-label">비밀번호 확인</label>
+          <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="비밀번호 확인">
+          <div id="pwdError" class="text-danger" style="font-size: 12px; margin-top: 5px; display: none;">비밀번호가 일치하지 않습니다.</div>
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" id="updateBtn" class="btn btn-primary w-100" disabled>정보 수정</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% include 'main_footer.html' %}
+
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'js/script.js' %}"></script>
+  <script>
+    const nicknameInput = document.getElementById('nickname');
+    const pwdInput = document.getElementById('password');
+    const pwdConfirmInput = document.getElementById('password_confirm');
+    const updateBtn = document.getElementById('updateBtn');
+    const profileImageInput = document.getElementById('profile_image');
+    const imageError = document.getElementById('imageError');
+    const preview = document.getElementById('preview');
+    const uploadDebug = document.getElementById('uploadDebug');
+    const fileNameSpan = document.getElementById('fileName');
+    const nicknameError = document.getElementById('nicknameError');
+    const pwdLengthError = document.getElementById('pwdLengthError');
+    const pwdError = document.getElementById('pwdError');
+    const previewIcon = document.getElementById('preview-icon');
+    const previewImg = document.getElementById('preview-img');
+    let hasFile = false;
+
+    function checkForm() {
+      const nickname = nicknameInput.value;
+      const pwd = pwdInput.value;
+      const pwdConfirm = pwdConfirmInput.value;
+
+      nicknameError.style.display = nickname.length < 2 ? 'block' : 'none';
+      pwdLengthError.style.display = pwd && pwd.length < 8 ? 'block' : 'none';
+      pwdError.style.display = (pwd && pwdConfirm && pwd !== pwdConfirm) ? 'block' : 'none';
+
+      const isPasswordValid = !pwd || (pwd.length >= 8 && pwd === pwdConfirm);
+      updateBtn.disabled = !(nickname.length >= 2 && isPasswordValid);
+    }
+
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        console.log("Selected file:", file); // 디버깅 로그 추가
+        if (!file.type.startsWith('image/')) {
+          imageError.style.display = 'block';
+          profileImageInput.value = '';
+          previewIcon.style.display = 'block'; // 아이콘 표시
+          previewImg.style.display = 'none'; // 이미지 숨김
+          previewImg.src = '';
+          uploadDebug.style.display = 'none';
+          hasFile = false;
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          previewIcon.style.display = 'none'; // 아이콘 숨김
+          previewImg.style.display = 'block'; // 이미지 표시
+          previewImg.src = e.target.result;
+          imageError.style.display = 'none';
+          uploadDebug.style.display = 'block';
+          fileNameSpan.textContent = file.name;
+          hasFile = true;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // 파일이 선택되지 않은 경우, 서버에 저장된 이미지가 있으면 유지, 없으면 아이콘 표시
+        {% if user.profile_image %}
+          previewIcon.style.display = 'none';
+          previewImg.style.display = 'block';
+          previewImg.src = "{{ user.profile_image.url }}";
+        {% else %}
+          previewIcon.style.display = 'block';
+          previewImg.style.display = 'none';
+          previewImg.src = '';
+        {% endif %}
+        imageError.style.display = 'none';
+        uploadDebug.style.display = 'none';
+        hasFile = false;
+      }
+      checkForm();
+    }
+
+    nicknameInput.addEventListener('input', checkForm);
+    pwdInput.addEventListener('input', checkForm);
+    pwdConfirmInput.addEventListener('input', checkForm);
+    profileImageInput.addEventListener('change', previewImage);
+
+    document.querySelector('label[for="profile_image"]').addEventListener('click', function(e) {
+      e.preventDefault();
+      profileImageInput.click();
+    });
+
+    // 폼 제출 시 디버깅
+    document.getElementById('editProfileForm').addEventListener('submit', function(e) {
+      const formData = new FormData(this);
+      console.log("Form data:", Array.from(formData.entries())); // 폼 데이터 디버깅
+      if (!hasFile && !nicknameInput.value && !pwdInput.value) {
+        console.log("No changes detected");
+      }
+    });
+
+    // 초기 폼 상태 체크
+    checkForm();
+  </script>
+</body>
+</html>

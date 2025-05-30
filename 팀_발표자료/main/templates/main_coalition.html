@@ -1,0 +1,86 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>제휴 문의 - Bigepoch</title>
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f8f9fa;
+      color: #212529;
+    }
+    .coalition-container {
+      max-width: 800px;
+      margin: 50px auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    .coalition-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .coalition-header h1 {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #343a40;
+    }
+    .coalition-content p {
+      font-size: 1rem;
+      color: #6c757d;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .coalition-content a {
+      color: #007bff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .coalition-content a:hover {
+      text-decoration: underline;
+    }
+    .back-button {
+      display: inline-block;
+      margin-top: 20px;
+      text-decoration: none;
+      color: #fff;
+      background-color: #007bff;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      transition: background-color 0.2s ease, color 0.2s;
+    }
+    .back-button:hover, .back-button:focus {
+      background-color: #0056b3;
+      color: #fff; /* hover 시에도 흰색 글자 유지 */
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="coalition-container">
+    <div class="coalition-header">
+      <h1>제휴 문의</h1>
+    </div>
+    <div class="coalition-content">
+      <p>
+        AI 기반 퀀트투자 예측 시스템을 개발한 <strong>Bigepoch 프로젝트 팀</strong>과 제휴를 원하신다면, 
+        아래 이메일로 연락 주시기 바랍니다.
+      </p>
+      <p>
+        <a href="https://www.naver.com" target="_blank">bigepoch1984@naver.com</a>
+      </p>
+      <p>
+        귀하의 성공적인 투자와 협력을 기대하며, 진심으로 감사드립니다.
+      </p>
+    </div>
+    <a href="{% url 'main:main' %}" class="back-button">메인으로 돌아가기</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{% load static %}
+
+<!-- 푸터 -->
+<footer class="footer">
+  <!-- 하단 네비게이션 -->
+  <nav class="navbar navbar-light bg-white fixed-bottom border-top d-flex justify-content-around align-items-center" style="height: 60px;">
+    <a href="{% url 'main:main' %}" class="footer-item" id="footer-home">
+      <i class="bi bi-house-door-fill footer-icon"></i>
+      <div class="footer-text">홈</div>
+    </a>
+    <a href="{% url 'chart:chart' %}" class="footer-item" id="footer-chart">
+      <i class="bi bi-bar-chart-fill footer-icon"></i>
+      <div class="footer-text">차트</div>
+    </a>
+    <a href="{% url 'predict_info:predict_info_page' %}" class="footer-item" id="footer-predict">
+      <i class="bi bi-broadcast-pin footer-icon"></i>
+      <div class="footer-text">예측정보</div>
+    </a>
+    <a href="{% url 'community:community' %}" class="footer-item" id="footer-community">
+      <i class="bi bi-chat-dots-fill footer-icon"></i>
+      <div class="footer-text">커뮤니티</div>
+    </a>
+    <a href="{% url 'mypage:mypage' %}" class="footer-item" id="footer-mypage">
+      <i class="bi bi-person-fill footer-icon"></i>
+      <div class="footer-text">마이페이지</div>
+    </a>
+  </nav>
+</footer>
+
+<link rel="stylesheet" href="{% static 'css/community.css' %}">
+<style>
+
+  /* 데스크탑일때 footer영역 display none */
+  @media (min-width: 992px) {
+    footer.footer {
+      display: none !important;
+    }
+  }
+</style>

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container my-3">
+  <h1>{{ post.title }}</h1>
+  <p class="text-muted">{{ post.reg_dt|date:"Y.m.d" }}</p>
+  {% if post.image %}
+    <img src="{{ post.image.url }}" alt="{{ post.title }}" class="img-fluid mb-3" style="max-width: 100%;">
+  {% endif %}
+  <div>{{ post.content|linebreaks }}</div>
+  <a href="{% url 'main:main' %}" class="btn btn-primary mt-3">목록으로</a>
+</div>
+{% endblock %}

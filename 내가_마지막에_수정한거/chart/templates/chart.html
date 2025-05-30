@@ -1,0 +1,1375 @@
+{% load static %}
+{% load humanize %}
+{% load chart_extras %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>차트 페이지 - {% if stock_name_displayed %}{{ stock_name_displayed }}{% else %}{{ stock_name_searched|default:"종목" }}{% endif %}</title>
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/community.css' %}">
+  <style>
+    :root {
+      --primary-color: #2962ff;
+      --secondary-color: #0039cb;
+      --success-color: #00c853;
+      --danger-color: #d50000;
+      --warning-color: #ffd600;
+      --info-color: #00b0ff;
+      --light-color: #f5f5f5;
+      --dark-color: #212121;
+      --chart-bg: #ffffff;
+      --chart-grid: #e0e0e0;
+      --chart-text: #424242;
+      --price-up: #ff1744;
+      --price-down: #00e676;
+      --ma5-color: #ffd700;
+      --ma20-color: #00e676;
+      --volume-color: #448aff;
+    }
+
+    [data-theme="dark"] {
+      --primary-color: #448aff;
+      --secondary-color: #2979ff;
+      --success-color: #00e676;
+      --danger-color: #ff1744;
+      --warning-color: #ffea00;
+      --info-color: #40c4ff;
+      --light-color: #424242;
+      --dark-color: #f5f5f5;
+      --chart-bg: #1a1d23;
+      --chart-grid: #424242;
+      --chart-text: #e0e0e0;
+      --price-up: #ff1744;
+      --price-down: #00e676;
+      --ma5-color: #ffd700;
+      --ma20-color: #00e676;
+      --volume-color: #448aff;
+    }
+
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      font-size: 0.95rem;
+      background-color: var(--light-color);
+      color: var(--dark-color);
+      transition: all 0.3s ease;
+    }
+
+    .theme-switch {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    .pretty-chart-box {
+      background: var(--chart-bg);
+      border: 1px solid var(--chart-grid);
+      border-radius: 1rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      margin-top: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .stock-info-header {
+      background: var(--chart-bg);
+      border-radius: 1rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .current-price-lg {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .price-change-up {
+      color: var(--price-up);
+      font-weight: 600;
+    }
+
+    .price-change-down {
+      color: var(--price-down);
+      font-weight: 600;
+    }
+
+    .search-form-chart {
+      background: var(--chart-bg);
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      margin-bottom: 1.5rem;
+    }
+
+    .search-form-chart .form-control {
+      border-radius: 0.5rem;
+      border: 2px solid var(--chart-grid);
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .search-form-chart .form-control:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 0.2rem rgba(41, 98, 255, 0.25);
+    }
+
+    .search-form-chart .btn {
+      border-radius: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .fiftytwo-section {
+      background: linear-gradient(135deg, var(--chart-bg) 0%, var(--light-color) 100%);
+      border: 1px solid var(--chart-grid);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    .fiftytwo-section .label {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+
+    .fiftytwo-section .value {
+      color: var(--dark-color);
+      font-weight: 700;
+    }
+
+    #autocompleteResultsChart {
+      background: var(--chart-bg);
+      border: 1px solid var(--chart-grid);
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+
+    #autocompleteResultsChart .list-group-item {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--chart-grid);
+      transition: all 0.2s ease;
+    }
+
+    #autocompleteResultsChart .list-group-item:hover {
+      background-color: var(--light-color);
+    }
+
+    .chart-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      background: var(--chart-bg);
+      border-radius: 0.5rem;
+      border: 1px solid var(--chart-grid);
+    }
+
+    .chart-controls .btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--primary-color);
+      border-color: var(--primary-color);
+      transition: all 0.3s ease;
+    }
+
+    .chart-controls .btn:hover {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .chart-controls .btn.active {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .chart-controls .btn i {
+      font-size: 1rem;
+    }
+
+    .top-stocks-table tr {
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .top-stocks-table tr:hover {
+      background-color: var(--light-color);
+    }
+
+    .top-stocks-table td {
+      position: relative;
+    }
+
+    .top-stocks-table td::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: var(--chart-grid);
+      transform: scaleX(0);
+      transition: transform 0.2s ease;
+    }
+
+    .top-stocks-table tr:hover td::after {
+      transform: scaleX(1);
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--chart-grid);
+      border-top: 4px solid var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 767.98px) {
+      .pretty-chart-box {
+        padding: 1rem;
+      }
+      
+      .current-price-lg {
+        font-size: 1.5rem;
+      }
+
+      .search-form-chart {
+        padding: 1rem;
+      }
+
+      .chart-controls {
+        flex-wrap: wrap;
+      }
+    }
+
+    .chart-tooltip {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        z-index: 1000;
+    }
+
+    .chart-controls button.active {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .chart-controls button {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .chart-controls button::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+        border-radius: 100%;
+        transform: scale(1, 1) translate(-50%);
+        transform-origin: 50% 50%;
+    }
+
+    .chart-controls button:focus:not(:active)::after {
+        animation: ripple 1s ease-out;
+    }
+
+    @keyframes ripple {
+        0% {
+            transform: scale(0, 0);
+            opacity: 0.5;
+        }
+        100% {
+            transform: scale(20, 20);
+            opacity: 0;
+        }
+    }
+
+    .top-stocks-table .price-change-up {
+      color: var(--price-up);
+    }
+
+    .top-stocks-table .price-change-down {
+      color: var(--price-down);
+    }
+
+    .market-summary-bottom .price-change-up {
+      color: var(--price-up);
+    }
+
+    .market-summary-bottom .price-change-down {
+      color: var(--price-down);
+    }
+
+    .market-cap-slider-container {
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+        background: var(--chart-bg);
+        border-radius: 1rem;
+        padding: 1rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+
+    .market-cap-slider {
+        display: flex;
+        transition: transform 0.5s ease;
+        gap: 1rem;
+    }
+
+    .market-cap-item {
+        flex: 0 0 calc(33.333% - 1rem);
+        background: var(--light-color);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-width: 250px;
+    }
+
+    .market-cap-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .rank-badge {
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        background: var(--primary-color);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .stock-info {
+        margin-bottom: 0.5rem;
+    }
+
+    .stock-name {
+        font-weight: bold;
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .stock-code {
+        color: var(--chart-text);
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .stock-market {
+        font-size: 0.8rem;
+        color: var(--primary-color);
+        font-weight: 500;
+    }
+
+    .market-cap-value {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    .slider-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0.8;
+        transition: all 0.3s ease;
+        z-index: 10;
+    }
+
+    .slider-nav:hover {
+        opacity: 1;
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    .slider-nav.prev {
+        left: 1rem;
+    }
+
+    .slider-nav.next {
+        right: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .market-cap-item {
+            flex: 0 0 calc(50% - 1rem);
+        }
+    }
+
+    @media (max-width: 576px) {
+        .market-cap-item {
+            flex: 0 0 calc(100% - 1rem);
+        }
+    }
+
+    .slider-nav-group {
+        position: absolute;
+        top: 10px;
+        right: 16px;
+        display: flex;
+        gap: 0.5rem;
+        z-index: 9999 !important;
+    }
+    .slider-nav.small-nav {
+        width: 32px;
+        height: 32px;
+        font-size: 1.3rem;
+        background: #2962ff !important;
+        color: #fff !important;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 1 !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        transition: all 0.2s;
+    }
+    .slider-nav.small-nav:hover {
+        background: #0039cb !important;
+        color: #fff !important;
+        opacity: 1 !important;
+    }
+    .slider-nav {
+        /* 기존 스타일 유지, 위치 스타일은 small-nav에서만 적용 */
+    }
+    .slider-nav.prev, .slider-nav.next {
+        left: unset;
+        right: unset;
+        top: unset;
+        transform: unset;
+    }
+    @media (max-width: 576px) {
+        .slider-nav-group {
+            top: 6px;
+            right: 8px;
+        }
+        .slider-nav.small-nav {
+            width: 28px;
+            height: 28px;
+            font-size: 1rem;
+        }
+    }
+
+    .slider-nav-group, .slider-nav-group-bottom { display: none !important; }
+    .slider-nav-group-bottom {
+        display: flex;
+        position: absolute;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        gap: 1rem;
+        z-index: 9999;
+        width: auto;
+    }
+    .slider-nav.bottom-nav {
+        width: 44px;
+        height: 44px;
+        font-size: 1.8rem;
+        background: #2962ff;
+        color: #fff;
+        border: 3px solid #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0.95;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+        transition: all 0.2s;
+    }
+    .slider-nav.bottom-nav:hover {
+        background: #0039cb;
+        color: #fff;
+        opacity: 1;
+    }
+    @media (max-width: 576px) {
+        .slider-nav.bottom-nav {
+            width: 32px;
+            height: 32px;
+            font-size: 1.1rem;
+        }
+        .slider-nav-group-bottom {
+            gap: 0.5rem;
+            bottom: 8px;
+        }
+    }
+
+    .slider-nav-bottom-section {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 2rem;
+        margin-top: 18px;
+        margin-bottom: 8px;
+    }
+    .slider-nav.bottom-nav {
+        width: 48px;
+        height: 48px;
+        font-size: 2rem;
+        background: #2962ff;
+        color: #fff;
+        border: 3px solid #fff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0.95;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+        transition: all 0.2s;
+    }
+    .slider-nav.bottom-nav:hover {
+        background: #0039cb;
+        color: #fff;
+        opacity: 1;
+    }
+    @media (max-width: 576px) {
+        .slider-nav.bottom-nav {
+            width: 36px;
+            height: 36px;
+            font-size: 1.3rem;
+        }
+        .slider-nav-bottom-section {
+            gap: 1rem;
+            margin-top: 10px;
+        }
+    }
+
+    .search-btn-long, .pretty-btn {
+        white-space: nowrap;
+    }
+    @media (max-width: 576px) {
+        .search-btn-long, .pretty-btn {
+            min-width: 54px;
+            padding-left: 0.9em;
+            padding-right: 0.9em;
+            font-size: 0.98rem;
+            white-space: nowrap;
+        }
+    }
+
+    .pretty-search-form {
+        background: #fff;
+        border-radius: 1.2rem;
+        box-shadow: 0 4px 24px rgba(41,98,255,0.07);
+        padding: 1.2rem 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .pretty-input-group {
+        border-radius: 0.8rem;
+        box-shadow: 0 2px 8px rgba(41,98,255,0.06);
+        background: #f7f9fc;
+        overflow: hidden;
+        border: none !important;
+    }
+    .pretty-input-icon {
+        background: transparent;
+        border: none !important;
+        color: #2962ff;
+        font-size: 1.1rem;
+        padding-left: 0.8rem;
+        padding-right: 0.3rem;
+    }
+    .pretty-input {
+        border: none !important;
+        background: transparent;
+        box-shadow: none;
+        font-size: 1.05rem;
+        padding-left: 0.2rem;
+    }
+    .pretty-input:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #2962ff33;
+        background: #eef3fb;
+        border: none !important;
+    }
+    .pretty-select {
+        border-radius: 0.7rem;
+        box-shadow: 0 2px 8px rgba(41,98,255,0.06);
+        border: 1.5px solid #e0e7ff;
+        background: #f7f9fc;
+        font-size: 1.01rem;
+    }
+    .pretty-btn {
+        border-radius: 0.7rem;
+        box-shadow: 0 2px 8px rgba(41,98,255,0.10);
+        font-weight: 600;
+        font-size: 1.07rem;
+    }
+    .ad-banner-section {
+        width: 100%;
+        min-height: 120px;
+        max-width: 100%;
+        background: #f5f6fa;
+        border-radius: 1.2rem;
+        box-shadow: 0 2px 12px rgba(41,98,255,0.07);
+        margin: 0 auto;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .ad-text {
+        color: #888;
+        font-size: 1.2rem;
+        font-weight: 500;
+        letter-spacing: 1px;
+    }
+    @media (max-width: 576px) {
+        .ad-banner-section {
+            min-height: 60px;
+            font-size: 0.95rem;
+            border-radius: 0.7rem;
+        }
+    }
+    .ad-banner-section-lg {
+        width: 100%;
+        min-height: 180px;
+        max-width: 1200px;
+        margin: 2rem auto 2rem auto;
+        background: #f0f4ff;
+        border-radius: 1.5rem;
+        box-shadow: 0 4px 24px rgba(41,98,255,0.09);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    .ad-text-lg {
+        color: #5a6b8a;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: 1.2px;
+    }
+    @media (max-width: 768px) {
+        .ad-banner-section-lg {
+            min-height: 100px;
+            border-radius: 1rem;
+        }
+        .ad-text-lg {
+            font-size: 1.05rem;
+        }
+    }
+  </style>
+</head>
+<body
+  data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+  {% include 'main_header.html' %}
+
+  <div id="app" style="padding-top: 60px;">
+    <div class="text-center mb-4">
+        <h2>차트페이지</h2>
+    </div>
+    <div class="container mt-3 mb-3">
+      <form method="get" class="d-flex flex-column flex-md-row gap-2 align-items-stretch align-items-md-center search-form-chart pretty-search-form">
+        <div class="input-group flex-grow-1 pretty-input-group" style="margin-right: 1rem;">
+          <span class="input-group-text pretty-input-icon"><i class="bi bi-search"></i></span>
+          <input type="text" id="stockQueryInputChart" name="query" value="{{ stock_name_searched|default:'삼성전자' }}" placeholder="종목명 또는 코드" class="form-control form-control-sm pretty-input" autocomplete="off">
+          <div id="autocompleteResultsChart" class="list-group"></div>
+        </div>
+        <select name="period" class="form-select form-select-sm pretty-select" style="min-width: 100px; max-width: 120px; margin-right: 1rem;">
+          <option value="1m" {% if period == '1m' %}selected{% endif %}>1개월</option>
+          <option value="3m" {% if period == '3m' %}selected{% endif %}>3개월</option>
+          <option value="6m" {% if period == '6m' or not period %}selected{% endif %}>6개월</option>
+          <option value="1y" {% if period == '1y' %}selected{% endif %}>1년</option>
+          <option value="3y" {% if period == '3y' %}selected{% endif %}>3년</option>
+          <option value="5y" {% if period == '5y' %}selected{% endif %}>5년</option>
+          <option value="all" {% if period == 'all' %}selected{% endif %}>전체</option>
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm search-btn-long pretty-btn">조회</button>
+      </form>
+    </div>
+    <div class="container mb-4">
+      <div class="ad-banner-section d-flex align-items-center justify-content-center">
+        <span class="ad-text">광고 영역 (728 x 120)</span>
+      </div>
+    </div>
+
+    <div class="container my-3">
+      {% if stock_info %}
+      <div class="bg-white rounded-3 p-3 mb-3 stock-info-header">
+        <div class="row align-items-center"> {# Row 사용 및 수직 중앙 정렬 #}
+          <div class="col-md col-12 mb-2 mb-md-0"> {# 모바일에서는 전체 너비, 데스크탑에서는 자동 너비 #}
+            <h5 class="mb-1">
+                {{ stock_info.name|default:stock_name_displayed }}
+                {% if stock_info.code %}({{ stock_info.code }}){% endif %}
+            </h5>
+            <div class="text-muted">
+                전일 종가: {{ stock_info.previous_close|floatformat:0|intcomma|default:"-" }}원
+                {% if stock_info.market_cap %}
+                <br>
+                시가총액: {{ stock_info.market_cap|to_eok|default:"-" }}원
+                {% endif %}
+            </div>
+          </div>
+          <div class="col-md-auto col-12 text-md-end"> {# 모바일에서는 전체 너비, 데스크탑에서는 자동 너비 및 우측 정렬 #}
+            <div class="current-price-lg mb-1"> {# h4 대신 div 사용 및 mb-1 추가 #}
+                {{ stock_info.current_price|floatformat:0|intcomma|default:"-" }}원
+            </div>
+            {% if stock_info.change is not None and stock_info.change_percent is not None %}
+            <div class="price-change-display {% if stock_info.change > 0 %}price-change-up{% elif stock_info.change < 0 %}price-change-down{% else %}price-change-neutral{% endif %}">
+              {{ stock_info.change|floatformat:0|intcomma }}원 ({{ stock_info.change_percent|floatformat:2 }}%)
+            </div>
+            {% else %}
+            <div class="price-change-display price-change-neutral">- (0.00%)</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="bg-white rounded-3 p-3 mb-3 text-center text-danger data-placeholder">
+        선택된 종목의 현재 시세 정보를 불러올 수 없습니다.
+      </div>
+      {% endif %}
+
+      <h6 class="fw-bold mb-2">
+        시세 차트: {% if stock_name_displayed %}{{ stock_name_displayed }}{% else %}{{ stock_name_searched|default:"종목" }}{% endif %}
+        {% if stock_info.code %}({{ stock_info.code }}){% endif %}
+      </h6>
+      <div class="pretty-chart-box position-relative">
+        <div class="chart-controls">
+          <div class="d-flex gap-2">
+            <button onclick="toggleMA5()" class="btn btn-sm" id="ma5Btn">5일 이동평균선</button>
+            <button onclick="toggleMA20()" class="btn btn-sm" id="ma20Btn">20일 이동평균선</button>
+            <button onclick="toggleAvgPrice()" class="btn btn-sm active" id="avgPriceBtn">평균 가격</button>
+          </div>
+          <div class="d-flex gap-2 ms-auto">
+            <button onclick="saveChart()" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-download"></i> 저장
+            </button>
+            <button onclick="shareChart()" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-share"></i> 공유
+            </button>
+          </div>
+        </div>
+        <div class="loading-overlay">
+          <div class="spinner"></div>
+        </div>
+        {% if candle_dates and open_prices and high_prices and low_prices and close_prices %}
+            <div id="stock-chart" style="width: 100%; height: 500px;"></div>
+        {% else %}
+            <div class="data-placeholder">차트 데이터를 불러올 수 없습니다. 종목을 검색해주세요.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="container my-3">
+      <div class="fiftytwo-section text-center">
+        <div class="fiftytwo-item"> {# 최고가 항목 #}
+            <span class="label">52주 최고:</span>
+            <span class="value">
+            {% if fifty_two_week_high is not None %}
+              {{ fifty_two_week_high|floatformat:0|intcomma }}원
+            {% else %}
+              -
+            {% endif %}
+            </span>
+        </div>
+        <span class="mx-1 mx-md-2 separator">|</span> {# 데스크탑에서만 보이는 구분자 #}
+        <div class="fiftytwo-item"> {# 최저가 항목 #}
+            <span class="label">52주 최저:</span>
+            <span class="value">
+            {% if fifty_two_week_low is not None %}
+              {{ fifty_two_week_low|floatformat:0|intcomma }}원
+            {% else %}
+              -
+            {% endif %}
+            </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="container my-3">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <h6 class="fw-bold">코스피 급등 TOP 5</h6>
+                {% if top5_kospi_gainers %}
+                <table class="table table-sm table-hover top-stocks-table">
+                    <thead><tr><th>종목명</th><th class="text-end">현재가</th><th class="text-end">등락률</th></tr></thead>
+                    <tbody>
+                    {% for stock in top5_kospi_gainers %}
+                    <tr>
+                        <td>{{ stock.name }} <small class="text-muted">({{ stock.code }})</small></td>
+                        <td class="text-end">{{ stock.close|intcomma }}원</td>
+                        <td class="{{ stock.status }} text-end">{{ stock.change_display }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                    <p class="data-placeholder">코스피 급등주 정보가 없습니다.</p>
+                {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+                <h6 class="fw-bold">코스닥 급등 TOP 5</h6>
+                {% if top5_kosdaq_gainers %}
+                <table class="table table-sm table-hover top-stocks-table">
+                    <thead><tr><th>종목명</th><th class="text-end">현재가</th><th class="text-end">등락률</th></tr></thead>
+                    <tbody>
+                    {% for stock in top5_kosdaq_gainers %}
+                    <tr>
+                        <td>{{ stock.name }} <small class="text-muted">({{ stock.code }})</small></td>
+                        <td class="text-end">{{ stock.close|intcomma }}원</td>
+                        <td class="{{ stock.status }} text-end">{{ stock.change_display }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                     <p class="data-placeholder">코스닥 급등주 정보가 없습니다.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-3">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <h6 class="fw-bold">코스피 급락 TOP 5</h6>
+                {% if top5_kospi_losers %}
+                <table class="table table-sm table-hover top-stocks-table">
+                    <thead><tr><th>종목명</th><th class="text-end">현재가</th><th class="text-end">등락률</th></tr></thead>
+                    <tbody>
+                    {% for stock in top5_kospi_losers %}
+                    <tr>
+                        <td>{{ stock.name }} <small class="text-muted">({{ stock.code }})</small></td>
+                        <td class="text-end">{{ stock.close|intcomma }}원</td>
+                        <td class="{{ stock.status }} text-end">{{ stock.change_display }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                    <p class="data-placeholder">코스피 급락주 정보가 없습니다.</p>
+                {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+                <h6 class="fw-bold">코스닥 급락 TOP 5</h6>
+                {% if top5_kosdaq_losers %}
+                <table class="table table-sm table-hover top-stocks-table">
+                    <thead><tr><th>종목명</th><th class="text-end">현재가</th><th class="text-end">등락률</th></tr></thead>
+                    <tbody>
+                    {% for stock in top5_kosdaq_losers %}
+                    <tr>
+                        <td>{{ stock.name }} <small class="text-muted">({{ stock.code }})</small></td>
+                        <td class="text-end">{{ stock.close|intcomma }}원</td>
+                        <td class="{{ stock.status }} text-end">{{ stock.change_display }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                     <p class="data-placeholder">코스닥 급락주 정보가 없습니다.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 시가총액 순위 슬라이드 섹션 -->
+    <div class="container my-4">
+        <h6 class="fw-bold mb-3">시가총액 TOP 30</h6>
+        <div class="market-cap-slider-container position-relative">
+            <div class="market-cap-slider">
+                {% if market_cap_rankings %}
+                    {% for stock in market_cap_rankings %}
+                    <div class="market-cap-item">
+                        <div class="rank-badge">{{ forloop.counter }}</div>
+                        <div class="stock-info">
+                            <div class="stock-name">{{ stock.name }}</div>
+                            <div class="stock-code">{{ stock.code }}</div>
+                            <div class="stock-market">{{ stock.market }}</div>
+                        </div>
+                        <div class="market-cap-value">
+                            {{ stock.market_cap|to_eok }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="data-placeholder">시가총액 순위 정보를 불러올 수 없습니다.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid market-summary-bottom">
+      <div class="container">
+        <h6 class="fw-bold mb-3 text-center">주요 시장 지수</h6>
+        <div class="row g-2">
+          {% for market_summary_item in markets %}
+            <div class="col-6 col-md-3">
+              <div class="bg-light rounded-3 p-2 p-md-3 text-center h-100">
+                <strong class="d-block mb-1" style="font-size:0.9rem;">{{ market_summary_item.name }}</strong>
+                <span class="d-block" style="font-size:0.95rem; font-weight:500;">{{ market_summary_item.value }}</span>
+                <span class="{{ market_summary_item.status }} price-change-display" style="font-size:0.8rem;">{{ market_summary_item.change }}</span>
+              </div>
+            </div>
+          {% empty %}
+            <div class="col-12 data-placeholder">시장 지수 정보가 없습니다.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="container-fluid mb-4">
+      <div class="ad-banner-section-lg d-flex align-items-center justify-content-center">
+        <span class="ad-text-lg">광고 영역 (970 x 180)</span>
+      </div>
+    </div>
+    </div>
+
+  {% include 'main_footer.html' %}
+
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'js/script.js' %}"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      //차트데이터
+      const candleDates = JSON.parse('{{ candle_dates|safe|default:"[]" }}');
+      const openPrices = JSON.parse('{{ open_prices|safe|default:"[]" }}');
+      const highPrices = JSON.parse('{{ high_prices|safe|default:"[]" }}');
+      const lowPrices = JSON.parse('{{ low_prices|safe|default:"[]" }}');
+      const closePrices = JSON.parse('{{ close_prices|safe|default:"[]" }}');
+      const ma5 = JSON.parse('{{ ma5|safe|default:"[]" }}');
+      const ma20 = JSON.parse('{{ ma20|safe|default:"[]" }}');
+      const volume = JSON.parse('{{ volume|safe|default:"[]" }}');
+
+      // 차트 상태 관리
+      window.chartState = {
+        theme: document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+        showMA5: false,
+        showMA20: false,
+        showAvgPrice: true
+      };
+
+      // 평균 가격 계산
+      const avgPrice = closePrices.reduce((a, b) => a + b, 0) / closePrices.length;
+
+      if (candleDates.length > 0 && closePrices.length > 0) {
+        // 종가 선 그래프
+        const priceTrace = {
+            x: candleDates,
+            y: closePrices,
+            type: 'scatter',
+            mode: 'lines',
+            name: '종가',
+            line: {
+                color: '#FF3D00',
+                width: 2.5
+            },
+            yaxis: 'y1'
+        };
+
+        // 5일 이동평균선
+        const ma5Trace = {
+            x: candleDates,
+            y: ma5,
+            name: '5일선',
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#00E5FF',
+                width: 1.5
+            },
+            yaxis: 'y1',
+            visible: false
+        };
+
+        // 20일 이동평균선
+        const ma20Trace = {
+            x: candleDates,
+            y: ma20,
+            name: '20일선',
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#FFEA00',
+                width: 1.5
+            },
+            yaxis: 'y1',
+            visible: false
+        };
+
+        // 평균 가격선
+        const avgPriceTrace = {
+            x: [candleDates[0], candleDates[candleDates.length - 1]],
+            y: [avgPrice, avgPrice],
+            name: '평균가격',
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#E0E0E0',
+                width: 1,
+                dash: 'dot'
+            },
+            yaxis: 'y1',
+            visible: true
+        };
+
+        // 거래량 색상 계산
+        const volumeColors = closePrices.map((close, i) => {
+            if (i === 0) return '#7C4DFF';
+            return close > closePrices[i-1] ? '#FF1744' : '#2979FF';
+        });
+
+        // 거래량
+        const volumeTrace = {
+            x: candleDates,
+            y: volume,
+            name: '거래량',
+            type: 'bar',
+            marker: {
+                color: volumeColors
+            },
+            yaxis: 'y2'
+        };
+
+        const layout = {
+            margin: {t: 20, r: 20, b: 30, l: 40},
+            xaxis: {
+                rangeslider: {visible: false},
+                color: '#E0E0E0',
+                gridcolor: '#424242',
+                zerolinecolor: '#424242'
+            },
+            yaxis: {
+                title: '가격(원)',
+                color: '#E0E0E0',
+                gridcolor: '#424242',
+                zerolinecolor: '#424242',
+                domain: [0.25, 1]
+            },
+            yaxis2: {
+                title: '거래량',
+                color: '#E0E0E0',
+                gridcolor: '#424242',
+                zerolinecolor: '#424242',
+                domain: [0, 0.22],
+                anchor: 'x'
+            },
+            legend: {
+                orientation: 'h',
+                x: 0.5,
+                xanchor: 'center',
+                y: 1.1,
+                font: {color: '#E0E0E0'}
+            },
+            height: 500,
+            paper_bgcolor: '#1E1E1E',
+            plot_bgcolor: '#1E1E1E',
+            font: { color: '#E0E0E0' }
+        };
+
+        const config = {
+            responsive: true,
+            displayModeBar: true,
+            modeBarButtonsToAdd: [
+                'drawline',
+                'drawopenpath',
+                'drawclosedpath',
+                'drawcircle',
+                'drawrect',
+                'eraseshape'
+            ]
+        };
+
+        // 차트 그리기
+        Plotly.newPlot('stock-chart', [priceTrace, ma5Trace, ma20Trace, avgPriceTrace, volumeTrace], layout, config);
+
+        // 차트 객체 저장
+        window.stockChart = document.getElementById('stock-chart');
+      } else {
+        console.error('차트 데이터가 없습니다.');
+      }
+
+      // 자동완성 로직 (기존과 동일)
+      const stockQueryInputChart = document.getElementById('stockQueryInputChart');
+      const autocompleteResultsDivChart = document.getElementById('autocompleteResultsChart');
+      let autocompleteRequestTimeoutChart;
+
+      if (stockQueryInputChart && autocompleteResultsDivChart) {
+          stockQueryInputChart.addEventListener('input', function() {
+              const query = this.value.trim();
+              clearTimeout(autocompleteRequestTimeoutChart);
+
+              if (query.length < 1) {
+                  autocompleteResultsDivChart.innerHTML = '';
+                  autocompleteResultsDivChart.style.display = 'none';
+                  return;
+              }
+              autocompleteRequestTimeoutChart = setTimeout(() => {
+                  fetch(`{% url 'chart:search_stocks_ajax_chart' %}?term=${encodeURIComponent(query)}&limit=7`)
+                      .then(response => {
+                          if (!response.ok) { throw new Error('Network response was not ok.'); }
+                          return response.json();
+                      })
+                      .then(data => {
+                          autocompleteResultsDivChart.innerHTML = '';
+                          if (data.error) {
+                              autocompleteResultsDivChart.innerHTML = `<div class="list-group-item text-danger">${data.error}</div>`;
+                              autocompleteResultsDivChart.style.display = 'block';
+                              return;
+                          }
+                          if (data.length > 0) {
+                              autocompleteResultsDivChart.style.display = 'block';
+                              data.forEach(item => {
+                                  const div = document.createElement('a');
+                                  div.href = '#';
+                                  div.classList.add('list-group-item', 'list-group-item-action');
+                                  div.textContent = item.label;
+                                  div.addEventListener('click', function(e) {
+                                      e.preventDefault();
+                                      stockQueryInputChart.value = item.value;
+                                      autocompleteResultsDivChart.innerHTML = '';
+                                      autocompleteResultsDivChart.style.display = 'none';
+                                      stockQueryInputChart.closest('form').submit();
+                                  });
+                                  autocompleteResultsDivChart.appendChild(div);
+                              });
+                          } else {
+                              autocompleteResultsDivChart.style.display = 'none';
+                          }
+                      })
+                      .catch(error => {
+                          console.error('Chart Autocomplete error:', error);
+                          autocompleteResultsDivChart.innerHTML = '<div class="list-group-item text-danger">검색 중 오류 발생</div>';
+                          autocompleteResultsDivChart.style.display = 'block';
+                      });
+              }, 300);
+          });
+
+          document.addEventListener('click', function(event) {
+              const inputGroup = stockQueryInputChart.closest('.input-group');
+              if (inputGroup && !inputGroup.contains(event.target)) {
+                  autocompleteResultsDivChart.innerHTML = '';
+                  autocompleteResultsDivChart.style.display = 'none';
+              }
+          });
+      }
+    });
+
+    // 차트 컨트롤 함수들
+    function toggleMA5() {
+        const btn = document.getElementById('ma5Btn');
+        window.chartState.showMA5 = !window.chartState.showMA5;
+        btn.classList.toggle('active');
+        
+        const update = {
+            'visible': [true, window.chartState.showMA5, window.chartState.showMA20, window.chartState.showAvgPrice, true]
+        };
+        Plotly.update('stock-chart', update);
+    }
+
+    function toggleMA20() {
+        const btn = document.getElementById('ma20Btn');
+        window.chartState.showMA20 = !window.chartState.showMA20;
+        btn.classList.toggle('active');
+        
+        const update = {
+            'visible': [true, window.chartState.showMA5, window.chartState.showMA20, window.chartState.showAvgPrice, true]
+        };
+        Plotly.update('stock-chart', update);
+    }
+
+    function toggleAvgPrice() {
+        const btn = document.getElementById('avgPriceBtn');
+        window.chartState.showAvgPrice = !window.chartState.showAvgPrice;
+        btn.classList.toggle('active');
+        
+        const update = {
+            'visible': [true, window.chartState.showMA5, window.chartState.showMA20, window.chartState.showAvgPrice, true]
+        };
+        Plotly.update('stock-chart', update);
+    }
+
+    // 로딩 상태 표시
+    function showLoading() {
+      document.querySelector('.loading-overlay').classList.add('active');
+    }
+
+    function hideLoading() {
+      document.querySelector('.loading-overlay').classList.remove('active');
+    }
+
+    // 차트 저장 기능
+    function saveChart() {
+        const chart = document.getElementById('stock-chart');
+        Plotly.toImage(chart, {
+            format: 'png',
+            width: 1200,
+            height: 800,
+            filename: 'stock-chart'
+        }).then(function(dataUrl) {
+            const link = document.createElement('a');
+            link.download = 'stock-chart.png';
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    }
+
+    // 차트 공유 기능
+    function shareChart() {
+        const currentUrl = window.location.href;
+        if (navigator.share) {
+            navigator.share({
+                title: '주식 차트 공유',
+                text: '현재 보고 있는 주식 차트를 공유합니다.',
+                url: currentUrl
+            }).catch(console.error);
+        } else {
+            // 클립보드에 URL 복사
+            navigator.clipboard.writeText(currentUrl).then(() => {
+                alert('차트 URL이 클립보드에 복사되었습니다.');
+            }).catch(err => {
+                console.error('클립보드 복사 실패:', err);
+                alert('URL 복사에 실패했습니다.');
+            });
+        }
+    }
+
+    // TOP5 종목 클릭 이벤트 처리
+    document.addEventListener('DOMContentLoaded', function() {
+        // 코스피 TOP5 종목 클릭 이벤트
+        const kospiTables = document.querySelectorAll('.top-stocks-table');
+        kospiTables.forEach(table => {
+            table.addEventListener('click', function(e) {
+                const row = e.target.closest('tr');
+                if (row && !row.classList.contains('thead')) {
+                    const stockName = row.querySelector('td:first-child').textContent.split('(')[0].trim();
+                    const stockCode = row.querySelector('td:first-child small').textContent.replace(/[()]/g, '').trim();
+                    
+                    // 검색 입력창에 종목명 설정
+                    const searchInput = document.getElementById('stockQueryInputChart');
+                    if (searchInput) {
+                        searchInput.value = stockName;
+                        // 검색창 위치로 부드럽게 스크롤
+                        searchInput.scrollIntoView({ behavior: 'smooth' });
+                        // 폼 제출
+                        searchInput.closest('form').submit();
+                    }
+                }
+            });
+        });
+    });
+
+    // 시가총액 슬라이더 자동 이동 (3초마다)
+    let currentSlide = 0;
+    const slideInterval = 3000; // 3초
+    let slideTimer;
+
+    function getItemsPerView() {
+        return window.innerWidth > 768 ? 3 : window.innerWidth > 576 ? 2 : 1;
+    }
+
+    function updateSlider() {
+        const slider = document.querySelector('.market-cap-slider');
+        const items = document.querySelectorAll('.market-cap-item');
+        const itemsPerView = getItemsPerView();
+        const maxSlide = Math.max(0, items.length - itemsPerView);
+        if (currentSlide > maxSlide) currentSlide = 0;
+        if (currentSlide < 0) currentSlide = maxSlide;
+        const offset = currentSlide * -100 / itemsPerView;
+        slider.style.transform = `translateX(${offset}%)`;
+    }
+
+    function nextSlide() {
+        const items = document.querySelectorAll('.market-cap-item');
+        const itemsPerView = getItemsPerView();
+        const maxSlide = Math.max(0, items.length - itemsPerView);
+        if (currentSlide >= maxSlide) {
+            currentSlide = 0;
+        } else {
+            currentSlide++;
+        }
+        updateSlider();
+    }
+
+    function startAutoSlide() {
+        slideTimer = setInterval(nextSlide, slideInterval);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateSlider();
+        startAutoSlide();
+        window.addEventListener('resize', function() {
+            updateSlider();
+        });
+    });
+  </script>
+</body>
+</html>

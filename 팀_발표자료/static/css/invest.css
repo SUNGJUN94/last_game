@@ -1,0 +1,95 @@
+/* 탭 버튼 스타일 */
+.filter-tab {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #f1f3f5;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+.filter-tab.active {
+  background: #000;
+  color: #fff;
+}
+
+/* 탭 설명 */
+.invest-filter-description .desc {
+  display: none;
+  font-size: 14px;
+  color: #212529;
+  line-height: 1.5;
+}
+.invest-filter-description .desc.active {
+  display: block;
+}
+
+/* 공통 스타일 적용 */
+.filter-btn,
+#currency-select,
+#search-input {
+  background-color: #f1f3f5;
+  border: none;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 14px;
+  height: 32px;
+  line-height: 1;
+}
+
+#currency-select {
+  padding-right: 24px; /* 드롭다운 화살표 공간 */
+}
+
+#search-input {
+  flex: 1;
+  min-width: 120px;
+  max-width: 140px;
+}
+
+.filter-btn.active {
+  background: #000;
+  color: #fff;
+}
+
+/* 별표 */
+.star {
+  color: #ccc;
+  cursor: pointer;
+}
+.star.active {
+  color: #0066ff;
+}
+
+/* 코인 리스트 내부 텍스트 */
+.coin-item {
+  font-size: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+.coin-item .rank {
+  width: 18px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #0066ff;
+}
+.coin-item img {
+  width: 26px;
+  height: 26px;
+}
+.coin-item .coin-name {
+  font-weight: bold;
+  font-size: 14px;
+}
+.coin-item .coin-code {
+  color: #666;
+  font-size: 13px;
+}
+.coin-item .price {
+  font-size: 13px;
+}
+.coin-item .rate {
+  font-size: 13px;
+  font-weight: bold;
+  margin-left: 8px;
+}

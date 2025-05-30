@@ -1,0 +1,111 @@
+.investing-box {
+    padding: 16px;
+    background-color: #fff;
+    border-radius: 8px;
+    margin: 12px;
+  }
+  
+  .investing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .investing-logo {
+    height: 24px;
+  }
+  
+  .investing-apps {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .app-icon {
+    height: 20px;
+  }
+  
+  .investing-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .investing-list li {
+    margin-bottom: 12px;
+  }
+  
+  .currency-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-decoration: none;
+    color: #212529;
+    font-size: 14px;
+  }
+  
+  .currency-name {
+    flex: 1;
+  }
+  
+  .currency-value {
+    width: 100px;
+    text-align: right;
+  }
+  
+  .currency-change {
+    width: 120px;
+    text-align: right;
+  }
+  
+  .text-red {
+    color: #d93025;
+  }
+  
+  .text-blue {
+    color: #0057e7;
+  }
+  
+  .inquiry-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background-color: #fff;
+  }
+  
+  .inquiry-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #212529;
+  }
+  
+  .inquiry-icon img {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+  }
+  
+  .inquiry-text {
+    font-size: 14px;
+  }
+  
+  .inquiry-divider {
+    width: 1px;
+    height: 40px;
+    background-color: #dee2e6;
+  }
+  
+  .exchange-wrapper {
+    padding: 16px;
+    background-color: #fff;
+  }
+  
+  .exchange-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }

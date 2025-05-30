@@ -1,0 +1,448 @@
+{% load static %}
+{% load humanize %}
+{% now "U" as now_timestamp %}
+{% load static community_filters %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마이페이지</title>
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/myPage.css' %}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+  <style>
+    /* 기존 스타일은 여기에 그대로 유지됩니다. */
+    /* ... (이전과 동일한 <style> 내용) ... */
+    .blocked-user-list { max-width: 800px; margin: 0 auto; padding: 20px; }
+    .blocked-user-card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: transform 0.2s, box-shadow 0.2s; }
+    .blocked-user-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+    .blocked-user-info { display: flex; align-items: center; }
+    .blocked-user-icon { font-size: 24px; color: #9376e0; margin-right: 15px; }
+    .blocked-user-details { font-size: 16px; }
+    .blocked-user-nickname { font-weight: 600; color: #333; }
+    .blocked-user-id { font-size: 14px; color: #6c757d; }
+    .unblock-btn { background: #dc3545; color: #fff; border: none; border-radius: 5px; padding: 8px 15px; font-size: 14px; transition: background 0.2s; }
+    .unblock-btn:hover { background: #c82333; }
+    .no-blocked-users { text-align: center; color: #6c757d; padding: 40px 20px; font-size: 18px; background: #f8f9fa; border-radius: 10px; margin: 20px auto; max-width: 800px;}
+    .pagination-container { margin-top: 20px; text-align: center; }
+    .pagination .page-item.active .page-link { background-color: #9376e0; border-color: #9376e0; }
+    .pagination .page-link { color: #9376e0; }
+    .pagination .page-link:hover { background-color: #e9ecef; }
+
+    /* 관심 종목 클릭 스타일 */
+    .favorite-stock-item {
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out;
+    }
+    .favorite-stock-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    /* 예측 팝업 모달 스타일 */
+    .modal-backdrop-custom {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5); z-index: 1040; display: none;
+    }
+    .prediction-popup {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background-color: white; padding: 20px; border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 1050;
+        width: 90%; max-width: 600px; display: none;
+        max-height: 80vh; overflow-y: auto;
+    }
+    .prediction-popup-header {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid #dee2e6; padding-bottom: 10px; margin-bottom: 15px;
+    }
+    .prediction-popup-header h5 { margin-bottom: 0; }
+    #popupPredictionChartContainer { margin-top: 20px; }
+
+    @media (max-width: 576px) {
+      .blocked-user-card { flex-direction: column; align-items: flex-start; padding: 10px; }
+      .unblock-btn { margin-top: 10px; width: 100%; text-align: center; }
+      .prediction-popup { width: 95%; padding: 15px;}
+    }
+        /* 내가 쓴글 한줄로만 표시 */
+    .single-line-ellipsis {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #myPostsList .list-group-item span.text-muted {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+  </style>
+</head>
+<body
+  data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+  <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+  <div id="app">
+    {% include 'main_header.html' %}
+
+    <div class="dropdown" id="mypageDropdown">
+      <button class="btn btn-light w-100 d-flex align-items-center justify-content-between" type="button" id="dropdownMenuBtn">
+        <div>
+          <i class="bi bi-house-door-fill me-2"></i> 
+          <span id="currentMenuLabel">마이페이지</span>
+        </div>
+        <i class="bi bi-chevron-down"></i>
+      </button>
+      <ul class="dropdown-menu w-100 mt-2" style="display: none; background-color: #f1f1f1;">
+        <li><a class="dropdown-item active-menu" href="#" data-label="마이페이지" data-content-id="content-mypage"><i class="bi bi-house-door-fill me-2"></i> 마이페이지</a></li>
+        <li><a class="dropdown-item" href="#" data-label="관심종목" data-content-id="content-favorite-stocks"><i class="bi bi-star-fill me-2"></i>관심 종목</a></li>
+        <li><a class="dropdown-item" href="#" data-label="내가 쓴 글" data-content-id="content-my-posts"><i class="bi bi-chat-dots-fill me-2"></i> 내가 쓴 글</a></li>
+        <li><a class="dropdown-item" href="#" data-label="차단 계정" data-content-id="content-blocked-users"><i class="bi bi-lock-fill me-2"></i> 차단 계정</a></li>
+      </ul>
+    </div>
+
+   <div id="content-mypage" class="content-block">
+      <div class="profile-summary d-flex align-items-center justify-content-between px-3 py-3">
+        <div class="d-flex align-items-center">
+          <div class="position-relative me-3" style="width: 50px; height: 50px; overflow: hidden; border-radius: 50%;">
+              <i class="bi bi-person-circle profile-icon" style="font-size: 50px; color: #9376e0; line-height: 50px;"></i>
+
+          </div>
+          <div>
+            <div id="nickname" class="fw-semibold">{{ user.nickname|default:user.login_id }}</div> {# ID 변경하여 myPage.js와 충돌 방지 #}
+            <div class="text-muted" style="font-size: 11px;">{{ user.greeting_message|default:"본인을 설명해주세요" }}</div>
+          </div>
+        </div>
+        <a href="{% url 'mypage:edit_profile' %}" class="btn profile-view-btn">프로필 수정</a>
+      </div>
+      <hr style="border-top: 1px solid #adb5bd; margin-top: 1px; margin-bottom: 30px;" />
+      
+      <div class="container my-3" id="prediction-list">
+        <h6 class="fw-bold mb-2">관심 종목</h6>
+          {% if favorite_stocks_list %}
+            <ul class="list-group" id="predictionItemsUl"> {% for fav_stock in favorite_stocks_list %}
+                <li class="list-group-item favorite-stock-item" data-stock-code="{{ fav_stock.stock_code }}" data-stock-name="{{ fav_stock.stock_name }}">
+                  <span class="fw-semibold">{{ fav_stock.stock_name }}</span> ({{ fav_stock.stock_code }})
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-center text-muted" id="noFavoriteStocksMessage">등록된 관심 종목이 없습니다. 예측 페이지에서 관심 종목을 추가해보세요.</p>
+          {% endif %}
+      </div>
+      <hr style="border-top: 13px solid #adb5bd; margin-top: 20px; margin-bottom: 20px;" />
+      <div class="container my-3">
+        <h6 class="fw-bold mb-2">내가 쓴 글</h6>
+        <ul class="list-group" id="myPostsList">
+        {% for post in my_posts_page_obj %}
+          <li class="list-group-item border-0 d-flex justify-content-between align-items-center">
+            <a href="{% url 'community:detail' post.id %}" class="fw-semibold text-dark text-decoration-none single-line-ellipsis">
+              <!-- {{ post.title|truncatechars:40 }} -->
+              {{ post.title|truncatechars:40|filter_curse|safe }}
+            </a>
+            <span class="text-muted small ms-2">
+              {{ post.reg_dt|timesince }} 전
+            </span>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">작성한 글이 없습니다.</li>
+        {% endfor %}
+        </ul>
+        {% if my_posts_page_obj.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" style="gap:2px;">
+              <li class="page-item {% if my_posts_page_obj.number == 1 %}disabled{% endif %}"><a class="page-link" href="?page=1&content=my-posts" aria-label="맨 앞으로">««</a></li>
+              {% if my_posts_page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ my_posts_page_obj.previous_page_number }}&content=my-posts" aria-label="이전">«</a></li>
+              {% else %}<li class="page-item disabled"><span class="page-link">«</span></li>{% endif %}
+              {% for num in page_range_posts %}<li class="page-item {% if my_posts_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}&content=my-posts">{{ num }}</a></li>{% endfor %}
+              {% if my_posts_page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ my_posts_page_obj.next_page_number }}&content=my-posts" aria-label="다음">»</a></li>
+              {% else %}<li class="page-item disabled"><span class="page-link">»</span></li>{% endif %}
+              <li class="page-item {% if my_posts_page_obj.number == total_pages_posts %}disabled{% endif %}"><a class="page-link" href="?page={{ total_pages_posts }}&content=my-posts" aria-label="맨 뒤로">»»</a></li>
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+       <hr style="border-top: 13px solid #adb5bd; margin-top: 20px; margin-bottom: 20px;" />
+      <div class="container my-3">
+        <h6 class="fw-bold mb-2">차단 목록</h6>
+        <ul class="list-group" id="blockuser">
+        {% for blocked in blocked_page_obj %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-semibold">{{ blocked.blocked.nickname|default:blocked.blocked.login_id }}</span>
+              <span class="text-muted small ms-2">({{ blocked.blocked.email }})</span>
+            </div>
+            <form method="post" action="{% url 'mypage:unblock_user' blocked.blocked.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger btn-sm">차단해제</button>
+            </form>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">차단한 유저가 없습니다.</li>
+        {% endfor %}
+        </ul>
+        {% if blocked_page_obj.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" style="gap:2px;">
+              <li class="page-item {% if blocked_page_obj.number == 1 %}disabled{% endif %}"><a class="page-link" href="?blocked_page=1&content=blocked-users" aria-label="맨 앞으로">&laquo;&laquo;</a></li>
+              <li class="page-item {% if not blocked_page_obj.has_previous %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_page_obj.previous_page_number }}&content=blocked-users" aria-label="이전">&laquo;</a></li>
+              {% for num in blocked_page_range %}<li class="page-item {% if blocked_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?blocked_page={{ num }}&content=blocked-users">{{ num }}</a></li>{% endfor %}
+              <li class="page-item {% if not blocked_page_obj.has_next %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_page_obj.next_page_number }}&content=blocked-users" aria-label="다음">&raquo;</a></li>
+              <li class="page-item {% if blocked_page_obj.number == blocked_total_pages %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_total_pages }}&content=blocked-users" aria-label="맨 뒤로">&raquo;&raquo;</a></li>
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="content-favorite-stocks" class="content-block" style="display: none;">
+      <div class="container my-3">
+        <h5 class="fw-bold mb-3 text-center">관심 종목 예측 시세</h5>
+        {% if favorite_stocks_list %}
+          <ul class="list-group" id="favoriteStockItemsUl_section">
+            {% for fav_stock in favorite_stocks_list %}
+              <li class="list-group-item favorite-stock-item" data-stock-code="{{ fav_stock.stock_code }}" data-stock-name="{{ fav_stock.stock_name }}">
+                <span class="fw-semibold">{{ fav_stock.stock_name }}</span> ({{ fav_stock.stock_code }})
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-center text-muted">등록된 관심 종목이 없습니다. 예측 페이지에서 관심 종목을 추가해보세요.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="content-my-posts" class="content-block" style="display: none;">
+      <div class="container my-3">
+        <h5 class="fw-bold mb-3 text-center">내가 쓴 글</h5>
+        <ul class="list-group">
+        {% for post in my_posts_page_obj %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="{% url 'community:detail' post.id %}" class="fw-semibold text-dark text-decoration-none">
+              {{ post.title|truncatechars:40 }}
+            </a>
+            <span class="text-muted small ms-2">
+              {{ post.reg_dt|timesince }} 전
+            </span>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">작성한 글이 없습니다.</li>
+        {% endfor %}
+        </ul>
+        {% if my_posts_page_obj.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" style="gap:2px;">
+              <li class="page-item {% if my_posts_page_obj.number == 1 %}disabled{% endif %}"><a class="page-link" href="?page=1&content=my-posts" aria-label="맨 앞으로">««</a></li>
+              {% if my_posts_page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ my_posts_page_obj.previous_page_number }}&content=my-posts" aria-label="이전">«</a></li>
+              {% else %}<li class="page-item disabled"><span class="page-link">«</span></li>{% endif %}
+              {% for num in page_range_posts %}<li class="page-item {% if my_posts_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}&content=my-posts">{{ num }}</a></li>{% endfor %}
+              {% if my_posts_page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ my_posts_page_obj.next_page_number }}&content=my-posts" aria-label="다음">»</a></li>
+              {% else %}<li class="page-item disabled"><span class="page-link">»</span></li>{% endif %}
+              <li class="page-item {% if my_posts_page_obj.number == total_pages_posts %}disabled{% endif %}"><a class="page-link" href="?page={{ total_pages_posts }}&content=my-posts" aria-label="맨 뒤로">»»</a></li>
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="content-blocked-users" class="content-block" style="display: none;">
+      <div class="container my-3">
+        <h5 class="fw-bold mb-3 text-center">차단 계정</h5>
+        <ul class="list-group">
+        {% for blocked in blocked_page_obj %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-semibold">{{ blocked.blocked.nickname|default:blocked.blocked.login_id }}</span>
+              <span class="text-muted small ms-2">({{ blocked.blocked.email }})</span>
+            </div>
+            <form method="post" action="{% url 'mypage:unblock_user' blocked.blocked.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger btn-sm">차단해제</button>
+            </form>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">차단한 유저가 없습니다.</li>
+        {% endfor %}
+        </ul>
+        {% if blocked_page_obj.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" style="gap:2px;">
+              <li class="page-item {% if blocked_page_obj.number == 1 %}disabled{% endif %}"><a class="page-link" href="?blocked_page=1&content=blocked-users" aria-label="맨 앞으로">&laquo;&laquo;</a></li>
+              <li class="page-item {% if not blocked_page_obj.has_previous %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_page_obj.previous_page_number }}&content=blocked-users" aria-label="이전">&laquo;</a></li>
+              {% for num in blocked_page_range %}<li class="page-item {% if blocked_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?blocked_page={{ num }}&content=blocked-users">{{ num }}</a></li>{% endfor %}
+              <li class="page-item {% if not blocked_page_obj.has_next %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_page_obj.next_page_number }}&content=blocked-users" aria-label="다음">&raquo;</a></li>
+              <li class="page-item {% if blocked_page_obj.number == blocked_total_pages %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_total_pages }}&content=blocked-users" aria-label="맨 뒤로">&raquo;&raquo;</a></li>
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    </div>
+
+    {% include 'main_footer.html' %}
+
+    <button id="scrollTopBtn" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" style="position: fixed; bottom: 90px; right: 15px; display: none; z-index: 1000; width: 45px; height: 45px; font-size: 24px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"><i class="bi bi-chevron-up" style="font-size: 20px;"></i></button>
+  </div>
+
+  <div class="modal-backdrop-custom" id="predictionPopupBackdrop"></div>
+  <div class="prediction-popup" id="predictionPopup">
+      <div class="prediction-popup-header">
+          <h5 id="popupStockName">종목 예측</h5>
+          <button type="button" class="btn-close" id="closePredictionPopup" aria-label="Close"></button>
+      </div>
+      <div class="prediction-popup-body">
+          <p class="small text-muted mb-2">예측 기준일: <span id="popupBaseDate">N/A</span></p>
+          <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                  <thead>
+                      <tr>
+                          <th scope="col" class="text-center">예측일</th>
+                          <th scope="col" class="text-end">예측 종가 (원)</th>
+                      </tr>
+                  </thead>
+                  <tbody id="popupPredictionTableBody">
+                      </tbody>
+              </table>
+          </div>
+          <div id="popupPredictionChartContainer" style="height: 250px;">
+              <canvas id="popupPredictionChart"></canvas>
+          </div>
+      </div>
+  </div>
+
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'js/myPage.js' %}"></script> 
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const favoriteStockItems = document.querySelectorAll('.favorite-stock-item'); // 이 클래스명을 가진 모든 항목 (두 섹션 모두)
+        const predictionPopup = document.getElementById('predictionPopup');
+        const predictionPopupBackdrop = document.getElementById('predictionPopupBackdrop');
+        const closePredictionPopupBtn = document.getElementById('closePredictionPopup');
+        
+        const popupStockNameEl = document.getElementById('popupStockName');
+        const popupBaseDateEl = document.getElementById('popupBaseDate');
+        const popupPredictionTableBodyEl = document.getElementById('popupPredictionTableBody');
+        const popupPredictionChartCanvas = document.getElementById('popupPredictionChart');
+        let popupPredictionChartInstance = null;
+
+        function showPopup() {
+            predictionPopup.style.display = 'block';
+            predictionPopupBackdrop.style.display = 'block';
+        }
+
+        function hidePopup() {
+            predictionPopup.style.display = 'none';
+            predictionPopupBackdrop.style.display = 'none';
+            if (popupPredictionChartInstance) {
+                popupPredictionChartInstance.destroy();
+                popupPredictionChartInstance = null;
+            }
+            popupPredictionTableBodyEl.innerHTML = ''; 
+        }
+
+        favoriteStockItems.forEach(item => {
+            item.addEventListener('click', function () {
+                const stockCode = this.dataset.stockCode;
+                const stockName = this.dataset.stockName;
+                
+                popupStockNameEl.textContent = `${stockName} (${stockCode}) 예측 로딩 중...`;
+                popupBaseDateEl.textContent = 'N/A';
+                popupPredictionTableBodyEl.innerHTML = '<tr><td colspan="2" class="text-center">데이터를 불러오는 중입니다...</td></tr>';
+                if (popupPredictionChartInstance) { // 차트 초기화
+                    popupPredictionChartInstance.destroy();
+                    popupPredictionChartInstance = null;
+                }
+                document.getElementById('popupPredictionChartContainer').style.display = 'none'; // 차트 숨김
+                showPopup();
+
+                fetch(`{% url 'mypage:get_favorite_prediction_ajax' %}?stock_code=${stockCode}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => { throw new Error(err.error || 'Network response was not ok'); });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.error) {
+                            popupStockNameEl.textContent = `${stockName} (${stockCode})`;
+                            popupPredictionTableBodyEl.innerHTML = `<tr><td colspan="2" class="text-center text-danger">${data.error}</td></tr>`;
+                            // 차트 컨테이너 숨김 처리 추가
+                            document.getElementById('popupPredictionChartContainer').style.display = 'none';
+                            return;
+                        }
+
+                        popupStockNameEl.textContent = `${data.stock_name} (${data.stock_code}) 예측`;
+                        popupBaseDateEl.textContent = data.prediction_base_date;
+                        
+                        let tableHtml = '';
+                        const chartLabels = [];
+                        const chartPrices = [];
+
+                        data.predictions.forEach(pred => {
+                            tableHtml += `<tr>
+                                            <td class="text-center">${pred.date}</td>
+                                            <td class="text-end">${Number(pred.price).toLocaleString()}</td>
+                                          </tr>`;
+                            chartLabels.push(pred.date);
+                            chartPrices.push(pred.price);
+                        });
+                        popupPredictionTableBodyEl.innerHTML = tableHtml;
+                        
+                        // 예측 데이터가 있을 때만 차트 표시
+                        if (chartLabels.length > 0) {
+                            document.getElementById('popupPredictionChartContainer').style.display = 'block';
+                            if (popupPredictionChartInstance) {
+                                popupPredictionChartInstance.destroy();
+                            }
+                            popupPredictionChartInstance = new Chart(popupPredictionChartCanvas, {
+                                type: 'line',
+                                data: {
+                                    labels: chartLabels,
+                                    datasets: [{
+                                        label: `${data.stock_name} 예측 종가`,
+                                        data: chartPrices,
+                                        borderColor: '#0d6efd',
+                                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                                        fill: true,
+                                        tension: 0.1,
+                                        pointRadius: 3,
+                                        pointHoverRadius: 5
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        y: { beginAtZero: false, ticks: { callback: function(value) { return value.toLocaleString() + ' 원'; }, font: {size: 10} } },
+                                        x: { ticks: { font: {size: 10} } }
+                                    },
+                                    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } }
+                                }
+                            });
+                        } else {
+                             document.getElementById('popupPredictionChartContainer').style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching favorite stock prediction:', error);
+                        popupStockNameEl.textContent = `${stockName} (${stockCode})`;
+                        popupPredictionTableBodyEl.innerHTML = `<tr><td colspan="2" class="text-center text-danger">오류: ${error.message}</td></tr>`;
+                        document.getElementById('popupPredictionChartContainer').style.display = 'none';
+                    });
+            });
+        });
+
+        closePredictionPopupBtn.addEventListener('click', hidePopup);
+        predictionPopupBackdrop.addEventListener('click', hidePopup);
+
+        // 드롭다운 및 콘텐츠 전환 로직은 myPage.js에서 처리한다고 가정하고 여기서는 제거합니다.
+        // 스크롤 상단 이동 버튼 로직도 myPage.js에서 처리한다고 가정하고 여기서는 제거합니다.
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+{% load static %}
+{% load humanize %}
+{% now "U" as now_timestamp %}
+{% load static community_filters %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마이페이지</title>
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/myPage.css' %}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+</head>
+<body
+  data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+  data-login-url="{% url 'account:login' %}"
+  data-logout-url="{% url 'account:logout' %}"
+  data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+  data-csrf-token="{{ csrf_token }}"
+  data-toggle-favorite-url="{% url 'predict_info:toggle_favorite_stock_ajax' %}"
+  data-get-prediction-url="{% url 'predict_info:predict_stock_price_ajax' %}"
+>
+  <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+  <div id="app">
+    {% include 'main_header.html' %}
+
+    <div class="dropdown" id="mypageDropdown">
+      <button class="btn btn-light w-100 d-flex align-items-center justify-content-between" type="button" id="dropdownMenuBtn">
+        <div>
+          <i class="bi bi-house-door-fill me-2"></i> 
+          <span id="currentMenuLabel">마이페이지</span>
+        </div>
+        <i class="bi bi-chevron-down"></i>
+      </button>
+      <ul class="dropdown-menu w-100 mt-2" style="display: none; background-color: #f1f1f1;">
+        <li><a class="dropdown-item active-menu" href="#" data-label="마이페이지" data-content-id="content-mypage"><i class="bi bi-house-door-fill me-2"></i> 마이페이지</a></li>
+        <li><a class="dropdown-item" href="#" data-label="관심종목" data-content-id="content-favorite-stocks"><i class="bi bi-star-fill me-2"></i>관심 종목</a></li>
+        <li><a class="dropdown-item" href="#" data-label="내가 쓴 글" data-content-id="content-my-posts"><i class="bi bi-chat-dots-fill me-2"></i> 내가 쓴 글</a></li>
+        <li><a class="dropdown-item" href="#" data-label="차단 계정" data-content-id="content-blocked-users"><i class="bi bi-lock-fill me-2"></i> 차단 계정</a></li>
+      </ul>
+    </div>
+
+   <div id="content-mypage" class="content-block">
+      <div class="profile-summary d-flex align-items-center justify-content-between px-3 py-3">
+        <div class="d-flex align-items-center">
+          <div class="position-relative me-3" style="width: 50px; height: 50px; overflow: hidden; border-radius: 50%;">
+              <i class="bi bi-person-circle profile-icon" style="font-size: 50px; color: #9376e0; line-height: 50px;"></i>
+          </div>
+          <div>
+            <div id="nickname" class="fw-semibold">{{ user.nickname|default:user.login_id }}</div>
+            <!-- <div class="text-muted" style="font-size: 11px;">{{ user.greeting_message|default:"본인을 설명해주세요" }}</div> -->
+          </div>
+        </div>
+        <a href="{% url 'mypage:edit_profile' %}" class="btn profile-view-btn">프로필 수정</a>
+      </div>
+      <hr style="border-top: 1px solid #adb5bd; margin-top: 1px; margin-bottom: 30px;" />
+      
+      <div class="container my-3" id="prediction-list">
+        <h6 class="fw-bold mb-2">관심 종목</h6>
+        <ul class="list-group" id="predictionItemsUl">
+          {% if favorite_stocks_list %}
+            {% for fav_stock in favorite_stocks_list %}
+              <li class="list-group-item border-0 px-0 py-0" data-stock-code-li="{{ fav_stock.stock_code }}">
+                <div class="favorite-stock-item-container">
+                    <div class="favorite-stock-item-info ps-3" data-stock-code="{{ fav_stock.stock_code }}" data-stock-name="{{ fav_stock.stock_name }}" data-market-name="{{ fav_stock.market_name|default_if_none:'' }}">
+                        <span class="fw-semibold text-dark">{{ fav_stock.stock_name }}</span>
+                        <span class="text-muted small ms-2">({{ fav_stock.stock_code }})</span>
+                    </div>
+                    <button class="btn btn-link p-0 ms-2 me-3 unfavorite-btn"
+                            data-stock-code="{{ fav_stock.stock_code }}"
+                            data-stock-name="{{ fav_stock.stock_name }}"
+                            data-market-name="{{ fav_stock.market_name|default_if_none:'' }}"
+                            title="관심 종목 해제">
+                        <i class="bi bi-heart-fill text-danger fs-5"></i>
+                    </button>
+                </div>
+              </li>
+            {% endfor %}
+          {% else %}
+            <li class="list-group-item text-muted border-0">등록된 관심 종목이 없습니다. 예측 페이지에서 관심 종목을 추가해보세요.</li>
+          {% endif %}
+        </ul>
+         <div id="favoriteStockActionFeedback" class="mt-2"></div>
+      </div>
+      <hr style="border-top: 13px solid #adb5bd; margin-top: 20px; margin-bottom: 20px;" />
+      <div class="container my-3">
+        <h6 class="fw-bold mb-2">내가 쓴 글</h6>
+        <ul class="list-group" id="myPostsList">
+        {% for post in my_posts_page_obj %}
+          <!-- <li class="list-group-item border-0 d-flex justify-content-between align-items-center">
+            <a href="{% url 'community:detail' post.id %}" class="fw-semibold text-dark text-decoration-none single-line-ellipsis"> -->
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="{% url 'community:detail' post.id %}" class="fw-semibold text-dark text-decoration-none">
+              {{ post.title|truncatechars:40|filter_curse|safe }}
+            </a>
+            <span class="text-muted small ms-2">
+              {{ post.reg_dt|timesince }} 전
+            </span>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted border-0">작성한 글이 없습니다.</li>
+        {% endfor %}
+        </ul>
+        {% if my_posts_page_obj.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" style="gap:2px;">
+              <li class="page-item {% if my_posts_page_obj.number == 1 %}disabled{% endif %}"><a class="page-link" href="?page=1&content=my-posts" aria-label="맨 앞으로">««</a></li>
+              {% if my_posts_page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ my_posts_page_obj.previous_page_number }}&content=my-posts" aria-label="이전">«</a></li>
+              {% else %}<li class="page-item disabled"><span class="page-link">«</span></li>{% endif %}
+              {% for num in page_range_posts %}<li class="page-item {% if my_posts_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}&content=my-posts">{{ num }}</a></li>{% endfor %}
+              {% if my_posts_page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ my_posts_page_obj.next_page_number }}&content=my-posts" aria-label="다음">»</a></li>
+              {% else %}<li class="page-item disabled"><span class="page-link">»</span></li>{% endif %}
+              <li class="page-item {% if my_posts_page_obj.number == total_pages_posts %}disabled{% endif %}"><a class="page-link" href="?page={{ total_pages_posts }}&content=my-posts" aria-label="맨 뒤로">»»</a></li>
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+       <hr style="border-top: 13px solid #adb5bd; margin-top: 20px; margin-bottom: 20px;" />
+      <div class="container my-3">
+        <h6 class="fw-bold mb-2">차단 목록</h6>
+        <ul class="list-group" id="blockuser">
+        {% for blocked in blocked_page_obj %}
+          <li class="list-group-item border-0 d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-semibold text-dark">{{ blocked.blocked.nickname|default:blocked.blocked.login_id }}</span>
+              <span class="text-muted small ms-2">({{ blocked.blocked.email }})</span>
+            </div>
+            <form method="post" action="{% url 'mypage:unblock_user' blocked.blocked.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger btn-sm">차단해제</button>
+            </form>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted border-0">차단한 유저가 없습니다.</li>
+        {% endfor %}
+        </ul>
+        {% if blocked_page_obj.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" style="gap:2px;">
+              <li class="page-item {% if blocked_page_obj.number == 1 %}disabled{% endif %}"><a class="page-link" href="?blocked_page=1&content=blocked-users" aria-label="맨 앞으로">&laquo;&laquo;</a></li>
+              <li class="page-item {% if not blocked_page_obj.has_previous %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_page_obj.previous_page_number }}&content=blocked-users" aria-label="이전">&laquo;</a></li>
+              {% for num in blocked_page_range %}<li class="page-item {% if blocked_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?blocked_page={{ num }}&content=blocked-users">{{ num }}</a></li>{% endfor %}
+              <li class="page-item {% if not blocked_page_obj.has_next %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_page_obj.next_page_number }}&content=blocked-users" aria-label="다음">&raquo;</a></li>
+              <li class="page-item {% if blocked_page_obj.number == blocked_total_pages %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_total_pages }}&content=blocked-users" aria-label="맨 뒤로">&raquo;&raquo;</a></li>
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="content-favorite-stocks" class="content-block" style="display: none;">
+      <div class="container my-3">
+        <h5 class="fw-bold mb-3 text-center">관심 종목 예측 시세</h5>
+        <ul class="list-group" id="favoriteStockItemsUl_section">
+          {% if favorite_stocks_list %}
+            {% for fav_stock in favorite_stocks_list %}
+             <li class="list-group-item border-0 px-0 py-0" data-stock-code-li="{{ fav_stock.stock_code }}">
+                <div class="favorite-stock-item-container">
+                    <div class="favorite-stock-item-info ps-3" data-stock-code="{{ fav_stock.stock_code }}" data-stock-name="{{ fav_stock.stock_name }}" data-market-name="{{ fav_stock.market_name|default_if_none:'' }}">
+                        <span class="fw-semibold text-dark">{{ fav_stock.stock_name }}</span>
+                        <span class="text-muted small ms-2">({{ fav_stock.stock_code }})</span>
+                    </div>
+                    <button class="btn btn-link p-0 ms-2 me-3 unfavorite-btn"
+                            data-stock-code="{{ fav_stock.stock_code }}"
+                            data-stock-name="{{ fav_stock.stock_name }}"
+                            data-market-name="{{ fav_stock.market_name|default_if_none:'' }}"
+                            title="관심 종목 해제">
+                        <i class="bi bi-heart-fill text-danger fs-5"></i>
+                    </button>
+                </div>
+              </li>
+            {% endfor %}
+          {% else %}
+            <li class="list-group-item text-muted border-0">등록된 관심 종목이 없습니다. 예측 페이지에서 관심 종목을 추가해보세요.</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+
+    <div id="content-my-posts" class="content-block" style="display: none;">
+      <div class="container my-3">
+        <h5 class="fw-bold mb-3 text-center">내가 쓴 글</h5>
+        <ul class="list-group">
+        {% for post in my_posts_page_obj %}
+          <li class="list-group-item border-0 d-flex justify-content-between align-items-center">
+            <a href="{% url 'community:detail' post.id %}" class="fw-semibold text-dark text-decoration-none single-line-ellipsis">
+              {{ post.title|truncatechars:40|filter_curse|safe }}
+            </a>
+            <span class="text-muted small ms-2">
+              {{ post.reg_dt|timesince }} 전
+            </span>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted border-0">작성한 글이 없습니다.</li>
+        {% endfor %}
+        </ul>
+        {% if my_posts_page_obj.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" style="gap:2px;">
+              <li class="page-item {% if my_posts_page_obj.number == 1 %}disabled{% endif %}"><a class="page-link" href="?page=1&content=my-posts" aria-label="맨 앞으로">««</a></li>
+              {% if my_posts_page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ my_posts_page_obj.previous_page_number }}&content=my-posts" aria-label="이전">«</a></li>
+              {% else %}<li class="page-item disabled"><span class="page-link">«</span></li>{% endif %}
+              {% for num in page_range_posts %}<li class="page-item {% if my_posts_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}&content=my-posts">{{ num }}</a></li>{% endfor %}
+              {% if my_posts_page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ my_posts_page_obj.next_page_number }}&content=my-posts" aria-label="다음">»</a></li>
+              {% else %}<li class="page-item disabled"><span class="page-link">»</span></li>{% endif %}
+              <li class="page-item {% if my_posts_page_obj.number == total_pages_posts %}disabled{% endif %}"><a class="page-link" href="?page={{ total_pages_posts }}&content=my-posts" aria-label="맨 뒤로">»»</a></li>
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="content-blocked-users" class="content-block" style="display: none;">
+      <div class="container my-3">
+        <h5 class="fw-bold mb-3 text-center">차단 계정</h5>
+        <ul class="list-group">
+        {% for blocked in blocked_page_obj %}
+          <li class="list-group-item border-0 d-flex justify-content-between align-items-center">
+            <div>
+              <span class="fw-semibold text-dark">{{ blocked.blocked.nickname|default:blocked.blocked.login_id }}</span>
+              <span class="text-muted small ms-2">({{ blocked.blocked.email }})</span>
+            </div>
+            <form method="post" action="{% url 'mypage:unblock_user' blocked.blocked.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger btn-sm">차단해제</button>
+            </form>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted border-0">차단한 유저가 없습니다.</li>
+        {% endfor %}
+        </ul>
+        {% if blocked_page_obj.paginator.num_pages > 1 %}
+          <nav class="mt-3">
+            <ul class="pagination justify-content-center flex-wrap" style="gap:2px;">
+              <li class="page-item {% if blocked_page_obj.number == 1 %}disabled{% endif %}"><a class="page-link" href="?blocked_page=1&content=blocked-users" aria-label="맨 앞으로">&laquo;&laquo;</a></li>
+              <li class="page-item {% if not blocked_page_obj.has_previous %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_page_obj.previous_page_number }}&content=blocked-users" aria-label="이전">&laquo;</a></li>
+              {% for num in blocked_page_range %}<li class="page-item {% if blocked_page_obj.number == num %}active{% endif %}"><a class="page-link" href="?blocked_page={{ num }}&content=blocked-users">{{ num }}</a></li>{% endfor %}
+              <li class="page-item {% if not blocked_page_obj.has_next %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_page_obj.next_page_number }}&content=blocked-users" aria-label="다음">&raquo;</a></li>
+              <li class="page-item {% if blocked_page_obj.number == blocked_total_pages %}disabled{% endif %}"><a class="page-link" href="?blocked_page={{ blocked_total_pages }}&content=blocked-users" aria-label="맨 뒤로">&raquo;&raquo;</a></li>
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    </div>
+
+    {% include 'main_footer.html' %}
+
+    <button id="scrollTopBtn" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" style="position: fixed; bottom: 90px; right: 15px; display: none; z-index: 1000; width: 45px; height: 45px; font-size: 24px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"><i class="bi bi-chevron-up" style="font-size: 20px;"></i></button>
+  </div>
+
+  <div class="modal-backdrop-custom" id="predictionPopupBackdrop"></div>
+  <div class="prediction-popup" id="predictionPopup">
+      <div class="prediction-popup-header">
+          <h5 id="popupStockName">종목 예측</h5>
+          <button type="button" class="btn-close" id="closePredictionPopup" aria-label="Close"></button>
+      </div>
+      <div class="prediction-popup-body">
+          <div id="feedbackMessagePopup"></div>
+          <p class="small text-muted mb-2">예측 기준일: <span id="popupBaseDate">N/A</span></p>
+          <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                  <thead>
+                      <tr>
+                          <th scope="col" class="text-center">예측일</th>
+                          <th scope="col" class="text-end">예측 종가 (원)</th>
+                      </tr>
+                  </thead>
+                  <tbody id="popupPredictionTableBody">
+                  </tbody>
+              </table>
+          </div>
+          <div id="popupPredictionChartContainer" style="height: 280px; display: none;">
+              <p class="chart-title-popup" id="popupChartTitle">과거 및 예측 주가 추이</p>
+              <canvas id="popupPredictionChart"></canvas>
+          </div>
+      </div>
+  </div>
+
+  <div class="modal fade" id="confirmUnfavoriteModal" tabindex="-1" aria-labelledby="confirmUnfavoriteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmUnfavoriteModalLabel">관심 종목 삭제 확인</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>정말로 <strong id="unfavoriteStockNameConfirm"></strong> 종목을 관심 목록에서 삭제하시겠습니까?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">아니오</button>
+          <button type="button" class="btn btn-danger" id="confirmUnfavoriteBtn">예, 삭제합니다</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'js/myPage.js' %}"></script> 
+
+  
+</body>
+</html>

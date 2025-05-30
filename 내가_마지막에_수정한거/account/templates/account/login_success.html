@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>로그인 성공</title>
+</head>
+<body>
+  <script>
+    const user = {
+      nickname: "{{ user.nickname|escapejs }}",
+      login_id: "{{ user.login_id|escapejs }}"
+    };
+    sessionStorage.setItem('user', JSON.stringify(user));
+    window.location.href = "/mypage/";
+  </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ - 퀀트 투자</title>
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f8f9fa;
+      color: #212529;
+    }
+    .faq-container {
+      max-width: 800px;
+      margin: 50px auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    .faq-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .faq-header h1 {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #343a40;
+    }
+    .faq-item {
+      margin-bottom: 20px;
+    }
+    .faq-item h5 {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #495057;
+      margin-bottom: 10px;
+    }
+    .faq-item p {
+      font-size: 1rem;
+      color: #6c757d;
+      line-height: 1.6;
+    }
+    .faq-item:not(:last-child) {
+      border-bottom: 1px solid #dee2e6;
+      padding-bottom: 20px;
+    }
+    .back-button {
+      display: inline-block;
+      margin-top: 20px;
+      text-decoration: none;
+      color: #fff;
+      background-color: #007bff;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      transition: background-color 0.2s ease, color 0.2s;
+    }
+    .back-button:hover, .back-button:focus {
+      background-color: #0056b3;
+      color: #fff !important; /* hover 시에도 흰색 글자 유지 */
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="faq-container">
+    <div class="faq-header">
+      <h1>퀀트 투자 FAQ</h1>
+      <p>퀀트 투자에 대해 자주 묻는 질문과 답변을 확인하세요.</p>
+    </div>
+    <div class="faq-item">
+      <h5>[1] 퀀트 투자는 무엇인가요?</h5>
+      <p>퀀트 투자는 수학적 모델과 통계적 데이터를 기반으로 투자 결정을 내리는 투자 방식입니다. 감정에 의존하지 않고 데이터를 통해 객관적인 판단을 내리는 것이 특징입니다.</p>
+    </div>
+    <div class="faq-item">
+      <h5>[2] 퀀트 투자에 필요한 기술은 무엇인가요?</h5>
+      <p>퀀트 투자를 위해서는 프로그래밍, 데이터 분석, 통계학, 그리고 금융 지식이 필요합니다. Python과 같은 프로그래밍 언어와 Pandas, NumPy 등의 데이터 분석 라이브러리가 유용합니다.</p>
+    </div>
+    <div class="faq-item">
+      <h5>[3] 퀀트 투자 전략은 어떻게 설계하나요?</h5>
+      <p>퀀트 투자 전략은 데이터를 기반으로 특정 조건을 설정하여 설계됩니다. 예를 들어, 저평가된 주식을 찾거나, 특정 기술적 지표를 활용한 매수/매도 신호를 설정할 수 있습니다.</p>
+    </div>
+    <div class="faq-item">
+      <h5>[4] 퀀트 투자의 장점은 무엇인가요?</h5>
+      <p>퀀트 투자는 감정적 판단을 배제하고, 데이터 기반으로 일관된 투자 결정을 내릴 수 있다는 점이 장점입니다. 또한, 백테스트를 통해 과거 데이터를 기반으로 전략의 성과를 검증할 수 있습니다.</p>
+    </div>
+    <div class="faq-item">
+      <h5>[5] 퀀트 투자에 리스크는 없나요?</h5>
+      <p>퀀트 투자도 리스크가 존재합니다. 데이터의 품질, 모델의 한계, 시장의 예측 불가능성 등이 주요 리스크 요인입니다. 따라서 철저한 검증과 리스크 관리가 필요합니다.</p>
+    </div>
+    <a href="{% url 'main:main' %}" class="back-button">메인으로 돌아가기</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,137 @@
+{% load static %}
+{% load static community_filters %}
+
+<body data-mypage-url="{% url 'mypage:mypage' %}" data-logout-url="{% url 'account:logout' %}" data-main-url="{% url 'main:main' %}" data-user-nickname="{{ request.user.username|default:'사용자' }}" data-is-authenticated="{{ request.user.is_authenticated|lower }}">
+
+<nav class="navbar navbar-light bg-white px-3 py-2 d-flex justify-content-between align-items-center"
+ style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; height: 60px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'main:main' %}"> 
+            <img src="{% static 'img/bigepoch1984_circular_logo.png' %}" alt="로고" style="width:32px;height:32px; border-radius:50%;">
+        </a>
+        <!-- 데스크탑일때만 시작 -->
+        <div class="desktop-nav d-none d-lg-flex gap-3 ms-4 align-items-center">
+            <a href="{% url 'main:main' %}" class="footer-item" id="footer-home">
+        <div class="footer-text">홈</div>
+            </a>
+            <a href="{% url 'chart:chart' %}" class="footer-item" id="footer-chart">
+        <div class="footer-text">차트</div>
+            </a>
+            <a href="{% url 'predict_info:predict_info_page' %}" class="footer-item" id="footer-predict">
+        <div class="footer-text">예측정보</div>
+            </a>
+            <a href="{% url 'community:community' %}" class="footer-item" id="footer-community">
+        <div class="footer-text">커뮤니티</div>
+            </a>
+            <a href="{% url 'mypage:mypage' %}" class="footer-item" id="footer-mypage">
+        <div class="footer-text">마이페이지</div>
+            </a>
+        </div>
+        <!-- 데스크탑일때만 종료 -->
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+        {% if request.user.is_authenticated %}
+            <div style="position: relative;">
+                <i class="bi bi-bell" id="alertIcon" style="font-size: 24px; cursor: pointer;" title="알림"></i>
+                <span id="unread-count" style="position: absolute; top: -5px; right: -5px; background: #ff4d4f; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; display: none;"></span>
+            </div>
+            
+            <div class="profile-preview" id="profileIcon">
+                {% if request.user.profile_image %}
+                    <img src="{{ request.user.profile_image.url }}" alt="프로필 이미지" class="rounded-circle">
+                {% else %}
+                    <i class="bi bi-person-fill profile-icon"></i>
+                {% endif %}
+            </div>
+            
+        {% else %}
+            <a href="{% url 'account:login' %}" style="text-decoration: none;">
+                <button type="button" class="btn p-0 m-0" style="background: none; border: none; font-size: 16px; font-weight: 700; color: #1b1e26;">
+                    로그인
+                </button>
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- 알림 팝업 -->
+    <div id="notification-popup" style="position: fixed; top: 60px; right: 15px; width: 300px; max-height: 400px; overflow-y: auto; background: #fff; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); z-index: 1002; display: none; animation: slideDown 0.3s ease-in-out;">
+        <div class="notification-header d-flex justify-content-between align-items-center p-2" style="border-bottom: 1px solid #dee2e6; background: #f8f9fa; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+            <strong style="font-size: 16px;">알림</strong>
+            <button class="btn-close" onclick="closeNotificationPopup()" style="font-size: 14px;"></button>
+        </div>
+        <div id="notification-body" class="notification-body">
+            <!-- AJAX로 데이터가 여기에 삽입됩니다 -->
+        </div>
+    </div>
+
+    <!-- 프로필 팝업 -->
+    <div id="profile-popup" style="position: fixed; top: 60px; right: 15px; width: 200px; background: white; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); z-index: 1002; display: none; animation: slideDown 0.3s ease-in-out;">
+        <div class="profile-header d-flex justify-content-between align-items-center p-2" style="border-bottom: 1px solid #dee2e6; background: #f8f9fa; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-person-circle me-2" style="font-size: 20px; color: #9376e0;"></i>
+                <span class="fw-normal text-dark" style="font-weight: 500;">{{ request.user.nickname|default:'사용자' }}</span>
+            </div>
+        </div>
+        <div class="profile-body p-2">
+            <ul class="list-unstyled m-0">
+                <li class="px-3 py-2 hover-bg text-muted" onclick="location.href='{% url 'mypage:edit_profile' %}'">프로필 수정</li>
+                <li class="px-3 py-2 hover-bg text-muted" onclick="performLogout()">로그아웃</li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<style>
+    /* 프로필 미리보기 스타일 */
+    .profile-preview {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        background-color: #e9ecef;
+        border-radius: 50%;
+        overflow: hidden;
+    }
+    .profile-icon {
+        font-size: 16px;
+        color: #9376e0;
+    }
+    .profile-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    .hover-bg:hover {
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+
+    /* 슬라이드 다운 애니메이션 */
+    @keyframes slideDown {
+        from { transform: translateY(-10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    #notification-popup, #profile-popup {
+        animation: slideDown 0.3s ease-in-out;
+    }
+
+    /* 데스크탑일때만 시작 */
+    .desktop-nav .footer-text {
+        font-size: 16px;      /* 글자 크기 증가 */
+        font-weight: 500;     /* 굵게 */
+        color: #212529;       /* 진한 회색 계열 (거의 검정) */
+    }
+
+    .desktop-nav .footer-text:hover {
+        color: #0d6efd;        /* 호버 시 파란색 (부트스트랩 기본) */
+    }
+    /* 데스크탑일때만 종료 */
+</style>
+
+</body>

@@ -1,0 +1,60 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>게시물 삭제</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+  <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/community.css' %}">
+  <style>
+    body {
+      background-color: #f9fafb;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      margin-top: 60px;
+    }
+  </style>
+</head>
+<body
+data-is-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"
+data-login-url="{% url 'account:login' %}"
+data-logout-url="{% url 'account:logout' %}"
+data-user-nickname="{{ request.user.nickname|default:'사용자'|escapejs }}"
+>
+  {% include 'main_header.html' %}
+
+  <div class="container">
+    <h2 class="mb-4">게시물 삭제</h2>
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="alert alert-warning">
+      <p>정말로 "<strong>{{ post.title }}</strong>" 게시물을 삭제하시겠습니까?</p>
+      <p>삭제된 게시물은 복구할 수 없습니다.</p>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">삭제 확인</button>
+      <a href="{% url 'community:detail' post.id %}" class="btn btn-secondary">취소</a>
+    </form>
+  </div>
+
+  {% include 'main_footer.html' %}
+  <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'js/script.js' %}"></script>
+</body>
+</html>

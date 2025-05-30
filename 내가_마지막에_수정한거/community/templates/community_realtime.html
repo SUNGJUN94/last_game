@@ -1,0 +1,94 @@
+{% load static %}
+{% load humanize %}
+
+{# posts는 NewsArticle 객체들의 Page 객체 #}
+{% if posts and posts.object_list %}
+  <ul class="list-group list-group-flush">
+    {% for news_item in posts.object_list %}
+      <li class="list-group-item community-item py-3">
+        <a href="{{ news_item.original_link }}" target="_blank" class="text-decoration-none" rel="noopener noreferrer">
+          <div class="d-flex w-100 justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              {# HTML 태그가 이미 제거된 제목을 표시 #}
+              <h6 class="mb-1 community-title">{{ news_item.title|safe }}</h6>
+              <small class="text-muted d-block">
+                {{ news_item.description|truncatewords_html:20|safe }} {# 요약 내용 20단어 #}
+              </small>
+            </div>
+            <small class="text-muted ms-2 flex-shrink-0 text-end" style="min-width: 100px;">
+              {{ news_item.pub_date|date:"Y.m.d H:i" }}<br>
+              <span class="badge bg-success rounded-pill mt-1" style="font-size: 0.75em;">
+                네이버 뉴스
+              </span>
+            </small>
+          </div>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+
+  {# 페이지네이션 (page_obj 사용) #}
+  {% if page_obj and page_obj.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?tab=news&subtab=realtime&page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Previous">
+              <span aria-hidden="true">&laquo;</span>
+            </a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">&laquo;</span>
+          </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item"><a class="page-link" href="?tab=news&subtab=realtime&page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a></li>
+          {% elif num == 1 or num == page_obj.paginator.num_pages %}
+             {% if page_obj.number > 4 and num == 1 and forloop.counter0 < page_obj.number|add:"-3" %}
+              <li class="page-item"><a class="page-link" href="?tab=news&subtab=realtime&page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">1</a></li>
+              <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% elif page_obj.number < page_obj.paginator.num_pages|add:"-3" and num == page_obj.paginator.num_pages and forloop.counter > page_obj.number|add:"3" %}
+              <li class="page-item disabled"><span class="page-link">...</span></li>
+              <li class="page-item"><a class="page-link" href="?tab=news&subtab=realtime&page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ page_obj.paginator.num_pages }}</a></li>
+            {% elif num == 1 or num == page_obj.paginator.num_pages %}
+               <li class="page-item"><a class="page-link" href="?tab=news&subtab=realtime&page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a></li>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?tab=news&subtab=realtime&page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" aria-label="Next">
+              <span aria-hidden="true">&raquo;</span>
+            </a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">&raquo;</span>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+
+{% else %}
+  <div class="text-center p-5">
+    <i class="bi bi-newspaper fs-1 text-muted mb-3"></i>
+    <p class="text-muted">최신 뉴스가 없습니다.</p>
+    <p><small>(뉴스가 아직 수집되지 않았거나 표시할 뉴스가 없습니다.)</small></p>
+  </div>
+{% endif %}
+
+{# 운영자에게만 실시간 뉴스 작성 버튼 노출 #}
+{% if request.user.is_authenticated and request.user.auth_id == 'admin' %}
+  <div class="text-end mt-3">
+    <a href="{% url 'community:write' %}?board_type=realtime_news" class="btn btn-primary rounded-pill px-3">
+      <i class="bi bi-pencil-fill me-1"></i> 실시간 뉴스 작성
+    </a>
+  </div>
+{% endif %}

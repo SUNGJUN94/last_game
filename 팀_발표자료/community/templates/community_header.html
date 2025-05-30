@@ -1,0 +1,13 @@
+{% load static %}
+<div class="d-flex align-items-center justify-content-center w-100 py-3 bg-white border-bottom">
+  <div class="d-flex bg-light rounded-pill p-1" style="gap: 4px;">
+    <a href="{% url 'community:community' %}?tab=community"
+       class="btn btn-sm fw-bold px-4 py-1 rounded-pill {% if active_tab == 'community' %}bg-white text-dark{% else %}bg-transparent text-muted{% endif %}">
+      커뮤니티
+    </a>
+    <a href="{% url 'community:community' %}?tab=news"
+       class="btn btn-sm fw-bold px-4 py-1 rounded-pill {% if active_tab == 'news' %}bg-white text-dark{% else %}bg-transparent text-muted{% endif %}">
+      뉴스
+    </a>
+  </div>
+</div>
